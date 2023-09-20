@@ -14,7 +14,7 @@ module axi_slave_rd(
         input   wire        rst_n            ,
         output  reg  [29:0] rd_addr          , //读首地址
         input   wire [63:0] rd_data          , //需要读的数据
-        input   reg         rd_en            , //读存储器使能
+        output  wire        rd_en            , //读存储器使能
         output  reg  [7:0]  rd_len           , //突发传输长度
         output  reg         rd_done          , //从机读完成标志
         

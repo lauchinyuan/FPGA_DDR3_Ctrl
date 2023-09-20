@@ -63,6 +63,7 @@ module axi_master_rd(
     
     //握手成功标志
     wire        m_axi_ar_handshake;  //读地址通道握手成功
+    reg         m_axi_r_handshake_d; //读数据通道握手成功打一拍,使其高电平与读取的数据对齐
     
     assign      m_axi_ar_handshake = m_axi_arready & m_axi_arvalid;
     assign      m_axi_r_handshake  = m_axi_rready & m_axi_rvalid;
@@ -186,9 +187,18 @@ module axi_master_rd(
         end
     end
     
+    //m_axi_r_handshake_d
+    always@(posedge clk or negedge rst_n) begin
+        if(~rst_n) begin
+            m_axi_r_handshake_d <= 1'b0;
+        end else begin
+            m_axi_r_handshake_d <= m_axi_r_handshake;
+        end
+    end
+    
     //rd_data 
     //读通道握手成功时,为有效数据输出
-    assign rd_data = (m_axi_r_handshake)?m_axi_rdata:64'b0;
+    assign rd_data = (m_axi_r_handshake_d)?m_axi_rdata:64'b0;
     
 
 endmodule
