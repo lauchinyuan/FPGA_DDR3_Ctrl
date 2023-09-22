@@ -1,14 +1,9 @@
 `timescale 1ns / 1ps
 //////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
-// 
+// Engineer: lauchinyuan
+// Email: lauchinyuan@yeah.net
 // Create Date: 2023/09/20 21:43:45
-// Design Name: 
 // Module Name: ddr_interface
-// Project Name: 
-// Target Devices: 
-// Tool Versions: 
 // Description: DDR3顶层模块, 将MIG IP核与axi_ddr_ctrl模块封装起来
 // 其中axi_ddr_ctrl模块包含AXI主机, 读FIFO、写FIFO及AXI读写控制器axi_ctrl
 // 外接DDR3存储器,即可实现对DDR3存储器的FIFO式读写

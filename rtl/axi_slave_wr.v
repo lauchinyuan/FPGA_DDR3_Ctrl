@@ -40,7 +40,7 @@ module axi_slave_wr(
         output  reg         s_axi_wready    , //从机发出的写数据ready
         
         //写响应通道
-        input   wire [3:0]  s_axi_bid       ,
+        output  wire [3:0]  s_axi_bid       ,
         output  wire [1:0]  s_axi_bresp     , //响应信号,表征写传输是否成功
         output  reg         s_axi_bvalid    , //响应信号valid标志
         input   wire        s_axi_bready      //主机响应ready信号        
@@ -51,6 +51,7 @@ module axi_slave_wr(
                 W_WAIT  =   3'b010  ,  //等待写状态
                 W       =   3'b011  ,  //写状态
                 B       =   3'b100  ;  //响应状态
+    
                 
     //状态机变量
     reg [2:0]   state       ;
@@ -220,7 +221,7 @@ module axi_slave_wr(
     
     assign wr_data = (s_axi_w_handshake)?s_axi_wdata:64'b0;  //握手有效时输出有效数据
     assign wr_en = s_axi_w_handshake;
-    
+    assign s_axi_bid = 4'd0;
     
     
 endmodule

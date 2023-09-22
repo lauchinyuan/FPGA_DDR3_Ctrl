@@ -32,7 +32,7 @@ module axi_ddr_ctrl(
         
         //AXI总线
         //AXI4写地址通道
-        output  wire [3:0]  m_axi_awid      , 
+        input   wire [3:0]  m_axi_awid      , 
         output  wire [29:0] m_axi_awaddr    ,
         output  wire [7:0]  m_axi_awlen     , //突发传输长度
         output  wire [2:0]  m_axi_awsize    , //突发传输大小(Byte)

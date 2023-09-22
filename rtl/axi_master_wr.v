@@ -41,7 +41,7 @@ module axi_master_wr(
         input   wire        m_axi_wready    , //从机发出的写数据ready
         
         //写响应通道
-        output  wire [3:0]  m_axi_bid       ,
+        input   wire [3:0]  m_axi_bid       ,
         input   wire [1:0]  m_axi_bresp     , //响应信号,表征写传输是否成功
         input   wire        m_axi_bvalid    , //响应信号valid标志
         output  reg         m_axi_bready      //主机响应ready信号
@@ -55,8 +55,7 @@ module axi_master_wr(
                 M_AXI_AWCACHE   =  4'b0010  , //存储器类型, 选择Normal Non-cacheable Non-bufferable
                 M_AXI_AWPROT    =  3'b0     ,
                 M_AXI_AWQOS     =  4'b0     ,
-                M_AXI_WSTRB     =  8'hff    ,
-                M_AXI_BID       =  4'b0     ;
+                M_AXI_WSTRB     =  8'hff    ;
                 
                 
     
@@ -96,7 +95,6 @@ module axi_master_wr(
     assign  m_axi_awprot  = M_AXI_AWPROT    ;
     assign  m_axi_awqos   = M_AXI_AWQOS     ;
     assign  m_axi_wstrb   = M_AXI_WSTRB     ;
-    assign  m_axi_bid     = M_AXI_BID       ;
     
     //状态转移
     //state
