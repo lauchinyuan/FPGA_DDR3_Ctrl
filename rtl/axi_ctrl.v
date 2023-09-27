@@ -35,7 +35,8 @@ module axi_ctrl(
         output  reg         axi_wr_start    , //AXI主机写请求
         output  wire [63:0] axi_wr_data     , //从写FIFO中读取的数据,写入AXI写主机
         output  reg  [29:0] axi_wr_addr     , //AXI主机写地址
-        output  reg  [7:0]  axi_wr_len      , //AXI主机写突发长度
+        output  wire [7:0]  axi_wr_len      , //AXI主机写突发长度
+        input   wire        axi_wr_done     , //AXI主机完成一次写操作
         
         //读AXI主机
         input   wire        axi_reading     , //AXI主机读正在进行
@@ -43,7 +44,9 @@ module axi_ctrl(
         output  reg         axi_rd_start    , //AXI主机读请求
         input   wire [63:0] axi_rd_data     , //从AXI读主机读到的数据,写入读FIFO
         output  reg  [29:0] axi_rd_addr     , //AXI主机读地址
-        output  reg  [7:0]  axi_rd_len        //AXI主机读突发长度        
+        output  wire [7:0]  axi_rd_len      , //AXI主机读突发长度 
+        input   wire        axi_rd_done       //AXI主机完成一次写操作
+        
     );
     
     //读写参数定义
@@ -63,25 +66,27 @@ module axi_ctrl(
     wire        axi_wr_start_raise      ;  //axi_wr_start上升沿
     wire        axi_rd_start_raise      ;  //axi_rd_start上升沿
     
-    //读写地址余量
-    wire [29:0] wr_addr_margin          ;  //写地址余量, 设定的写终止地址与当前突发传输的首地址之间的差值
-    wire [29:0] rd_addr_margin          ;  //读地址余量, 设定的读终止地址与当前突发传输的首地址之间的差值
-    
     //真实的读写突发长度
     wire  [7:0] real_wr_len             ;  //真实的写突发长度,是wr_burst_len+1
     wire  [7:0] real_rd_len             ;  //真实的读突发长度,是rd_burst_len+1
     
-    //wr_addr_margin
-    assign wr_addr_margin = wr_end_addr - axi_wr_addr + 30'd1;
+    //突发地址增量, 每次进行一次连续突发传输地址的增量, 在外边计算, 方便后续复用
+    wire  [29:0]burst_wr_addr_inc       ;
+    wire  [29:0]burst_rd_addr_inc       ;
     
-    //rd_addr_margin
-    assign rd_addr_margin = rd_end_addr - axi_rd_addr + 30'd1;    
-    
-    //real_wr_len
+       
+    //真实的读写突发长度
     assign real_wr_len = wr_burst_len + 8'd1;
-    
-    //real_rd_len
     assign real_rd_len = rd_burst_len + 8'd1;
+    
+    //突发地址增量
+    assign burst_wr_addr_inc = real_wr_len * W_ADDR_INCR;
+    assign burst_rd_addr_inc = real_rd_len * R_ADDR_INCR;
+    
+    
+    //向AXI主机发出的读写突发长度
+    assign axi_wr_len = wr_burst_len;
+    assign axi_rd_len = rd_burst_len;
     
     //AXI读主机开始读标志
     //axi_rd_start
@@ -147,20 +152,18 @@ module axi_ctrl(
         end
     end */
     
-    //AXI写地址
+    //AXI写地址,更新地址并判断是否可能超限
     //axi_wr_addr
     always@(posedge clk or negedge rst_n) begin
         if(~rst_n) begin
             axi_wr_addr <= wr_beg_addr;  //初始化为起始地址
         end else if(wr_rst) begin
             axi_wr_addr <= wr_beg_addr;
-/*         end else if(axi_writing && (axi_wr_addr + {W_ADDR_INCR[28:0], 1'b0}) > wr_end_addr) begin 
-        //如果继续增加8, 下一个写首地址已经不够再填一次突发传输的数据了, 位拼接的作用是×2 */
-           end else if(axi_writing && (wr_addr_margin < {W_ADDR_INCR[28:0], 1'b0})) begin 
-        //如果继续增加8, 下一个写首地址已经不够再填一次突发传输的数据了, 位拼接的作用是×2
+        end else if(axi_wr_done && axi_wr_addr > (wr_end_addr - {burst_wr_addr_inc[28:0], 1'b0} + 30'd1)) begin 
+        //每次写完成后判断是否超限, 下一个写首地址后续的空间已经不够再进行一次突发写操作, 位拼接的作用是×2
             axi_wr_addr <= wr_beg_addr;
-        end else if(axi_writing) begin //在AXI主机写的过程中更新地址
-            axi_wr_addr <= axi_wr_addr + W_ADDR_INCR;
+        end else if(axi_wr_done) begin
+            axi_wr_addr <= axi_wr_addr + burst_wr_addr_inc;  //增加一个burst_len的地址
         end else begin
             axi_wr_addr <= axi_wr_addr;
         end
@@ -171,21 +174,19 @@ module axi_ctrl(
     always@(posedge clk or negedge rst_n) begin
         if(~rst_n) begin
             axi_rd_addr <= rd_beg_addr;  //初始化为起始地址
-        end else if(rd_rst) begin
+        end else if(wr_rst) begin
             axi_rd_addr <= rd_beg_addr;
-/*         end else if(axi_reading && (axi_rd_addr + {R_ADDR_INCR[28:0], 1'b0}) > rd_end_addr) begin 
-        //如果继续增加8, 下一个读首地址已经不够一次突发传输的数据了, 位拼接的作用是×2 */
-        end else if(axi_reading && (rd_addr_margin < {R_ADDR_INCR[28:0], 1'b0})) begin 
-        //如果继续增加8, 下一个读首地址已经不够一次突发传输的数据了, 位拼接的作用是×2
+        end else if(axi_rd_done && axi_rd_addr > (rd_end_addr - {burst_rd_addr_inc[28:0], 1'b0} + 30'd1)) begin 
+        //每次写完成后判断是否超限, 下一个写首地址后续的空间已经不够再进行一次突发写操作, 位拼接的作用是×2
             axi_rd_addr <= rd_beg_addr;
-        end else if(axi_reading) begin //在AXI主机读的过程中更新地址
-            axi_rd_addr <= axi_rd_addr + R_ADDR_INCR;
+        end else if(axi_rd_done) begin
+            axi_rd_addr <= axi_rd_addr + burst_rd_addr_inc;  //增加一个burst_len的地址
         end else begin
             axi_rd_addr <= axi_rd_addr;
         end
     end
     
-    //AXI写突发长度
+/*     //AXI写突发长度
     //axi_wr_len 
     always@(posedge clk or negedge rst_n) begin
         if(~rst_n) begin
@@ -204,11 +205,11 @@ module axi_ctrl(
         end else begin
             axi_wr_len <= axi_wr_len;
         end
-    end
+    end */
 
     //AXI读突发长度
     //axi_rd_len 
-    always@(posedge clk or negedge rst_n) begin
+/*     always@(posedge clk or negedge rst_n) begin
         if(~rst_n) begin
             axi_rd_len <= rd_burst_len; //axi_rd_len初始化
         end else if(rd_rst) begin
@@ -224,7 +225,7 @@ module axi_ctrl(
         end else begin
             axi_rd_len <= axi_rd_len;
         end
-    end    
+    end    */ 
 
     
     //读FIFO, 从SDRAM中读出的数据先暂存于此

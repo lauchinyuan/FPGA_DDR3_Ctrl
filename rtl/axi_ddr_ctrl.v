@@ -86,6 +86,7 @@ module axi_ddr_ctrl(
     wire [63:0] axi_wr_data     ;
     wire [29:0] axi_wr_addr     ;
     wire [7:0]  axi_wr_len      ;
+    wire        axi_wr_done     ;
     
     //读AXI主机
     wire        axi_reading     ;
@@ -94,6 +95,7 @@ module axi_ddr_ctrl(
     wire [63:0] axi_rd_data     ;
     wire [29:0] axi_rd_addr     ;
     wire [7:0]  axi_rd_len      ;
+    wire        axi_rd_done     ;
     
     //AXI控制器
     axi_ctrl axi_ctrl_inst(
@@ -124,6 +126,7 @@ module axi_ddr_ctrl(
         .axi_wr_data     (axi_wr_data     ), //从写FIFO中读取的数据,写入AXI写主机
         .axi_wr_addr     (axi_wr_addr     ), //AXI主机写地址
         .axi_wr_len      (axi_wr_len      ), //AXI主机写突发长度
+        .axi_wr_done     (axi_wr_done     ),
         
         //读AXI主机
         .axi_reading     (axi_reading     ), //AXI主机读正在进行
@@ -131,7 +134,8 @@ module axi_ddr_ctrl(
         .axi_rd_start    (axi_rd_start    ), //AXI主机读请求
         .axi_rd_data     (axi_rd_data     ), //从AXI读主机读到的数据,写入读FIFO
         .axi_rd_addr     (axi_rd_addr     ), //AXI主机读地址
-        .axi_rd_len      (axi_rd_len      )  //AXI主机读突发长度        
+        .axi_rd_len      (axi_rd_len      ), //AXI主机读突发长度   
+        .axi_rd_done     (axi_rd_done     )
     );
     
     
@@ -146,7 +150,7 @@ module axi_ddr_ctrl(
         .rd_addr          (axi_rd_addr      ), //读首地址
         .rd_data          (axi_rd_data      ), //读出的数据
         .rd_len           (axi_rd_len       ), //突发传输长度
-        .rd_done          (                 ), //读完成标志
+        .rd_done          (axi_rd_done      ), //读完成标志
         .rd_ready         (axi_rd_ready     ), //准备好读标志
         .m_axi_r_handshake(axi_reading      ), //读通道成功握手
         
@@ -180,7 +184,7 @@ module axi_ddr_ctrl(
         .wr_addr          (axi_wr_addr      ), //写首地址
         .wr_data          (axi_wr_data      ),
         .wr_len           (axi_wr_len       ), //突发传输长度
-        .wr_done          (                 ), //写完成标志
+        .wr_done          (axi_wr_done      ), //写完成标志
         .m_axi_w_handshake(axi_writing      ), //写通道成功握手
         .wr_ready         (axi_wr_ready     ), //写准备信号,拉高时可以发起wr_start
         
