@@ -12,7 +12,7 @@ module ddr3_test
   parameter WR_END_ADDR     = 30'd8191  ,
   parameter WR_BURST_LEN    = 8'd1      ,
   parameter RD_BEG_ADDR     = 30'd0     ,
-  parameter RD_END_ADDR     = 30'd8191  ,
+  parameter RD_END_ADDR     = 30'd2200  ,
   parameter RD_BURST_LEN    = 8'd1      
   )
     (
@@ -55,19 +55,17 @@ module ddr3_test
     wire        calib_done     ; //DDR3初始化完成 */
     
     //进行ILA在线调试时, 使用这一段代码
-    (*mark_debug="true"*)wire        wr_en          ; //写FIFO写请求
-    (*mark_debug="true"*)wire [15:0] wr_data        ; //写FIFO写数据 
-    (*mark_debug="true"*)wire        rd_mem_enable  ; //读存储器使能,防
-    (*mark_debug="true"*)wire        rd_en          ; //读FIFO读请求
-    (*mark_debug="true"*)wire [15:0] rd_data        ; //读FIFO读数据
-    (*mark_debug="true"*)wire        rd_valid       ; //读FIFO有效标志   
-    (*mark_debug="true"*)wire        calib_done     ; //DDR3初始化完成    
+    (*mark_debug="true", dont_touch="true"*)wire        wr_en          ; //写FIFO写请求
+    (*mark_debug="true", dont_touch="true"*)wire [15:0] wr_data        ; //写FIFO写数据 
+    (*mark_debug="true", dont_touch="true"*)wire        rd_mem_enable  ; //读存储器使能,防
+    (*mark_debug="true", dont_touch="true"*)wire        rd_en          ; //读FIFO读请求
+    (*mark_debug="true", dont_touch="true"*)wire [15:0] rd_data        ; //读FIFO读数据
+    (*mark_debug="true", dont_touch="true"*)wire        rd_valid       ; //读FIFO有效标志   
+    (*mark_debug="true", dont_touch="true"*)wire        calib_done     ; //DDR3初始化完成    
     
     wire        ui_clk         ; //MIG IP核输出的用户时钟, 用作AXI控制器时钟
     wire        ui_rst         ; //MIG IP核输出的复位信号, 高电平有效
-    
-    //数据测试模块相关接口
-    wire        wr_correct     ; //读取的数据和写入的数据一致    
+       
     
     //测试数据生成模块
     testdata_gen_valid testdata_gen_valid_inst(
@@ -82,11 +80,8 @@ module ddr3_test
         //读端口
         .rd_en           (rd_en           ),   //读FIFO读使能
         .rd_mem_enable   (rd_mem_enable   ),   //读存储器使能, 为高时才能从DDR3 SDRAM中读取数据
-        .rd_valid        (rd_valid        ),   //读有效信号, 为高时代表读取的数据有效
-        .rd_data         (rd_data         ),   //从读FIFO中读取的数据
+        .rd_valid        (rd_valid        )    //读有效信号, 为高时代表读取的数据有效
         
-        //数据一致性标志
-        .wr_correct      (wr_correct      )    //读取的数据和写入的数据一致
     );
     
     
@@ -148,10 +143,6 @@ module ddr3_test
         .ddr3_dm             (ddr3_dm             ),
         .ddr3_odt            (ddr3_odt            )
     );
-    
-    
-    
-    
     
     
 endmodule

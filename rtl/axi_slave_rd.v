@@ -106,7 +106,7 @@ module axi_slave_rd(
         if(~rst_n) begin
             rd_len <= 8'd0;
             rd_addr<= 30'b0;
-        end else if(state == R_WAIT) begin  //读地址通道已经更新过数据了,此时再将参数寄存
+        end else if(s_axi_ar_handshake) begin  //读地址通道握手成功, 获取握手成功时的地址和len
             rd_len <= s_axi_arlen;
             rd_addr<= s_axi_araddr;
         end else begin

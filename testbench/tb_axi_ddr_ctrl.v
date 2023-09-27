@@ -76,7 +76,6 @@ module tb_axi_ddr_ctrl(
     wire [7:0]  s_rd_len       ; //突发传输长度
     wire        s_rd_done      ; //从机读完成标志
     
-    reg         s_rd_en_d      ; //对s_rd_en打一拍,使得可以和从存储器中读出的数据对齐
     
     
     //AXI控制模块FIFO读写控制
@@ -137,9 +136,9 @@ module tb_axi_ddr_ctrl(
         rd_mem_enable <= 1'b0;
     #20  
         rst_n <= 1'b1;
-    #1800
+    #1810
         fifo_wr_en <= 1'b1;  //写FIFO
-    #2600
+    #2590
         fifo_wr_en <= 1'b0;
     #600
         rd_mem_enable <= 1'b1; //已经向存储器中写了数据,可以开始读了
@@ -149,6 +148,7 @@ module tb_axi_ddr_ctrl(
         rd_mem_enable <= 1'b0;
         fifo_rd_en <= 1'b0;
     end
+    
     
     
     //时钟生成模块,产生FIFO读写时钟及AXI读写主机工作时钟
@@ -166,17 +166,8 @@ module tb_axi_ddr_ctrl(
 
     //锁定的复位信号, 作为真正有效的复位信号
     assign      locked_rst_n = locked & rst_n;
-    
-    //s_rd_en_d 
-    always@(posedge clk_ddr or negedge locked_rst_n) begin
-        if(~locked_rst_n) begin
-            s_rd_en_d <= 1'b0;
-        end else begin
-            s_rd_en_d <= s_rd_en;
-        end
-    end
-    
-    
+   
+   
     //AXI控制模块
     axi_ddr_ctrl axi_ddr_ctrl_inst(
         .clk             (clk_ddr         ), //AXI读写主机时钟
@@ -335,7 +326,7 @@ module tb_axi_ddr_ctrl(
     
     
     //在RAM读数据有效时, 将数据送到s_rd_data(AXI读从机)
-    assign s_rd_data = (s_rd_en_d == 1'b1)?data:64'b0;
+    assign s_rd_data = data;
     
     //在ARM写入数据有效时, 将数据写入存储器模块
     assign data = (s_wr_en)?s_wr_data:{64{1'bz}};

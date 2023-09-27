@@ -85,7 +85,7 @@ module tb_axi_rd(
     
     //读参数赋值
     assign m_rd_addr = 30'd8;
-    assign m_rd_len  = 8'd0; //突发长度是m_rd_len+1
+    assign m_rd_len  = 8'd2; //突发长度是m_rd_len+1
 
 
     //读主机

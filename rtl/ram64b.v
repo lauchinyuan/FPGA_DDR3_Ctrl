@@ -29,6 +29,7 @@ module ram64b(
     
     //输出数据缓存
     reg [63:0]  data_reg    ;
+    wire[63:0]  data_w      ;
     
     //写基地址, 将此地址作为首地址, 在一个时钟周期写入8Byte地址空间连续的数据, 写有效时每个时钟周期自增8Byte
     reg [29:0]  wr_base_addr;
@@ -85,7 +86,7 @@ module ram64b(
     end  
     
     
-    //读写过程
+    //写过程
     genvar i;
     generate
         for(i=0;i<=7;i=i+1) begin
@@ -101,9 +102,17 @@ module ram64b(
             end    
         end
     endgenerate
+    
+    
+    //读过程, 无延迟读出
+    generate
+        for(i=0;i<=7;i=i+1) begin
+            assign data_w[63-8*i:56-8*i] = (rd_en)?mem[rd_base_addr+i]:8'h0;
+        end
+    endgenerate
 
     
     //数据总线
-    assign data = (wr_en)?{64{1'bz}}:data_reg;
+    assign data = (wr_en)?{64{1'bz}}:data_w;
     
 endmodule

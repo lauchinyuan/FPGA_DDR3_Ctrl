@@ -19,15 +19,13 @@ module tb_testdata_gen_valid(
     //FIFO写端口   
     wire [15:0]  wr_data         ;   //向写FIFO中写入的数据
     wire         wr_en           ;   //写FIFO写使能
+    wire [15:0]  rd_data         ;   //从FIFO中读出的数据
                                  
     //FIFO读端口                
     wire         rd_en           ;   //读FIFO读使能
     wire         rd_mem_enable   ;   //读存储器使能, 为高时才能从DDR3 SDRAM中读取数据
     wire         fifo_empty      ;
-    wire [15:0]  rd_data         ;   //从读FIFO中读取的数据
     
-    //数据一致性标志
-    wire         wr_correct      ;   //读取的数据和写入的数据一致标志
     
     initial begin
         clk = 1'b1;
@@ -55,15 +53,11 @@ module tb_testdata_gen_valid(
         //读端口
         .rd_en           (rd_en           ),   //读FIFO读使能
         .rd_mem_enable   (rd_mem_enable   ),   //读存储器使能, 为高时才能从DDR3 SDRAM中读取数据
-        .rd_valid        (~fifo_empty     ),   //读有效信号, 为高时代表读取的数据有效
-        .rd_data         (rd_data         ),   //从读FIFO中读取的数据
-        
-        //数据一致性标志
-        .wr_correct      (wr_correct      )    //当读取的数据和写入的数据一致时, 判断DDR3 SDRAM的读写控制逻辑正确
+        .rd_valid        (~fifo_empty     )   //读有效信号, 为高时代表读取的数据有效
     );
     
     //模拟存储器读FIFO、写FIFO接口的FIFO IP核
-    //数据生成模块生成数据后, 将数据写入次FIFO, 接着从FIFO读端口读出数据
+    //数据生成模块生成数据后, 将数据写入次FIFO, 接着从FIFO读端口读出数据, 但这里FIFO只能读一次, 实际SDRAM可以多次读取
     testdata_fifo testdata_fifo_inst (
         .clk        (clk            ),      // input wire clk
         .srst       (~rst_n         ),      // input wire srst

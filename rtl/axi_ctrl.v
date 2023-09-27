@@ -63,8 +63,6 @@ module axi_ctrl(
     wire        axi_wr_start_raise      ;  //axi_wr_start上升沿
     wire        axi_rd_start_raise      ;  //axi_rd_start上升沿
     
-    reg         rd_fifo_wr_en           ;  //读FIFO写使能,对输入的axi_reading打一拍,使之与有效读取数据对齐
-    
     //读写地址余量
     wire [29:0] wr_addr_margin          ;  //写地址余量, 设定的写终止地址与当前突发传输的首地址之间的差值
     wire [29:0] rd_addr_margin          ;  //读地址余量, 设定的读终止地址与当前突发传输的首地址之间的差值
@@ -74,10 +72,10 @@ module axi_ctrl(
     wire  [7:0] real_rd_len             ;  //真实的读突发长度,是rd_burst_len+1
     
     //wr_addr_margin
-    assign wr_addr_margin = wr_end_addr - axi_wr_addr;
+    assign wr_addr_margin = wr_end_addr - axi_wr_addr + 30'd1;
     
     //rd_addr_margin
-    assign rd_addr_margin = rd_end_addr - axi_rd_addr;    
+    assign rd_addr_margin = rd_end_addr - axi_rd_addr + 30'd1;    
     
     //real_wr_len
     assign real_wr_len = wr_burst_len + 8'd1;
@@ -140,14 +138,14 @@ module axi_ctrl(
     //axi_rd_start上升沿提取
     assign axi_rd_start_raise = (~axi_rd_start_d) & axi_rd_start;
     
-    //rd_fifo_wr_en
+/*     //rd_fifo_wr_en
     always@(posedge clk or negedge rst_n) begin
         if(~rst_n) begin
             rd_fifo_wr_en <= 1'b0;
         end else begin
             rd_fifo_wr_en <= axi_reading;
         end
-    end
+    end */
     
     //AXI写地址
     //axi_wr_addr
@@ -156,7 +154,9 @@ module axi_ctrl(
             axi_wr_addr <= wr_beg_addr;  //初始化为起始地址
         end else if(wr_rst) begin
             axi_wr_addr <= wr_beg_addr;
-        end else if(axi_writing && (axi_wr_addr + {W_ADDR_INCR[28:0], 1'b0}) >= wr_end_addr) begin 
+/*         end else if(axi_writing && (axi_wr_addr + {W_ADDR_INCR[28:0], 1'b0}) > wr_end_addr) begin 
+        //如果继续增加8, 下一个写首地址已经不够再填一次突发传输的数据了, 位拼接的作用是×2 */
+           end else if(axi_writing && (wr_addr_margin < {W_ADDR_INCR[28:0], 1'b0})) begin 
         //如果继续增加8, 下一个写首地址已经不够再填一次突发传输的数据了, 位拼接的作用是×2
             axi_wr_addr <= wr_beg_addr;
         end else if(axi_writing) begin //在AXI主机写的过程中更新地址
@@ -173,7 +173,9 @@ module axi_ctrl(
             axi_rd_addr <= rd_beg_addr;  //初始化为起始地址
         end else if(rd_rst) begin
             axi_rd_addr <= rd_beg_addr;
-        end else if(axi_reading && (axi_rd_addr + {R_ADDR_INCR[28:0], 1'b0}) >= rd_end_addr) begin 
+/*         end else if(axi_reading && (axi_rd_addr + {R_ADDR_INCR[28:0], 1'b0}) > rd_end_addr) begin 
+        //如果继续增加8, 下一个读首地址已经不够一次突发传输的数据了, 位拼接的作用是×2 */
+        end else if(axi_reading && (rd_addr_margin < {R_ADDR_INCR[28:0], 1'b0})) begin 
         //如果继续增加8, 下一个读首地址已经不够一次突发传输的数据了, 位拼接的作用是×2
             axi_rd_addr <= rd_beg_addr;
         end else if(axi_reading) begin //在AXI主机读的过程中更新地址
@@ -231,7 +233,7 @@ module axi_ctrl(
         .wr_clk             (clk                ),  //写端口时钟是AXI主机时钟, 从axi_master_rd模块写入数据
         .rd_clk             (rd_clk             ),  //读端口时钟
         .din                (axi_rd_data        ),  //从axi_master_rd模块写入数据
-        .wr_en              (rd_fifo_wr_en      ),  //axi_master_rd正在读时,FIFO也在写入
+        .wr_en              (axi_reading        ),  //axi_master_rd正在读时,FIFO也在写入
         .rd_en              (rd_en              ),  //读FIFO读使能
         .dout               (rd_data            ),  //读FIFO读取的数据
         .full               (                   ),  

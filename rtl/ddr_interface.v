@@ -84,7 +84,7 @@ module ddr_interface(
     
     //读地址通道
     wire [3:0]  axi_arid      ; 
-    wire [29:0] axi_araddr    ;
+    wire [29:0] axi_araddr    ; 
     wire [7:0]  axi_arlen     ; //突发传输长度
     wire [2:0]  axi_arsize    ; //突发传输大小(Byte)
     wire [1:0]  axi_arburst   ; //突发类型
@@ -106,7 +106,7 @@ module ddr_interface(
     // axi_ddr_ctrl模块
     axi_ddr_ctrl axi_ddr_ctrl_inst(
         .clk             (ui_clk           ), //AXI读写主机时钟
-        .rst_n           (ui_rst           ), 
+        .rst_n           (~ui_rst          ), 
                 
         //用户端    
         .wr_clk          (wr_clk           ), //写FIFO写时钟
@@ -173,6 +173,7 @@ module ddr_interface(
         .m_axi_rvalid    (axi_rvalid       ), //读数据有效标志
         .m_axi_rready    (axi_rready       )  //主机发出的读数据ready
     );
+    
     
     // Vivado MIG IP核
       axi_ddr3 axi_ddr3_mig_inst (
