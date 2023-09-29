@@ -12,27 +12,28 @@ module tb_uart_receiver(
 
     );
 
-        reg         clk         ; //与FIFO时钟同步
-        reg         rst_n       ;
-        reg         rx          ; //串口数据
-                             
-        wire[31:0]  fifo_wr_data; //FIFO写数据    
-        wire        fifo_wr_en  ; //FIFO写使能
+    reg         clk         ; //与FIFO时钟同步
+    reg         rst_n       ;
+    reg         rx          ; //串口数据
+                         
+    wire[31:0]  fifo_wr_data; //FIFO写数据    
+    wire        fifo_wr_en  ; //FIFO写使能
     
     reg [31:0] mem[511: 0];  //缓存待输出数据
     
     //将32bit txt文本数据读取到缓存空间mem
     initial begin
-        $readmemh("C:/Users/Public/ddr/txt/cloud_40_30_uint32.txt", mem);  
+        $readmemh("C:/Users/123/Desktop/cloud_40_30_uint32.txt", mem);  
     end
     
     //时钟、复位及数据
     initial begin
         clk = 1'b1;
         rst_n <= 1'b0;
+        rx <= 1'b1;
     #20
         rst_n <= 1'b1;
-    #30
+    #3000
         //发送测试激励
         uart_test();
     end
@@ -80,7 +81,7 @@ module tb_uart_receiver(
                 9: rx <= 1'b1;
                 default: rx <= 1'b0;
             endcase
-        #(5207*20)  //每bit之间的时间差
+        #(5207*20);  //每bit之间的时间差
         end
     endtask
     
@@ -92,7 +93,7 @@ module tb_uart_receiver(
     #(
         .UART_BPS      ('d9600      ),   //串口波特率
         .CLK_FREQ      ('d50_000_000),   //时钟频率
-        .FIFO_WR_WIDTH ('d16        ),   //写FIFO写端口数据位宽
+        .FIFO_WR_WIDTH ('d32        ),   //写FIFO写端口数据位宽
         .FIFO_WR_BYTE  ('d4         )    //写FIFO写端口字节数
     ) 
     uart_receiver_inst
