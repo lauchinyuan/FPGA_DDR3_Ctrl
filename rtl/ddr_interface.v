@@ -10,7 +10,10 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module ddr_interface(
+module ddr_interface
+    #(parameter FIFO_WR_WIDTH = 5'd16,  //用户端FIFO读写位宽
+                FIFO_RD_WIDTH = 5'd16)
+        (
         input   wire        clk                 , //DDR3时钟, 也就是DDR3 MIG IP核参考时钟
         input   wire        rst_n               , 
                     
@@ -104,7 +107,11 @@ module ddr_interface(
     
     
     // axi_ddr_ctrl模块
-    axi_ddr_ctrl axi_ddr_ctrl_inst(
+    axi_ddr_ctrl 
+        #(.FIFO_WR_WIDTH(FIFO_WR_WIDTH),  //用户端FIFO读写位宽
+          .FIFO_RD_WIDTH(FIFO_RD_WIDTH))
+          axi_ddr_ctrl_inst
+         (
         .clk             (ui_clk           ), //AXI读写主机时钟
         .rst_n           (~ui_rst          ), 
                 

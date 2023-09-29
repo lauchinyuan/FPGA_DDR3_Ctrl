@@ -8,19 +8,21 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module testdata_gen_valid(
-        input   wire        clk             ,  //和FIFO时钟保持一致
-        input   wire        rst_n           ,
-        input   wire        calib_done      ,  //DDR3初始化完成标志
+module testdata_gen_valid
+    #(parameter FIFO_WR_WIDTH = 5'd16)  //用户端FIFO写位宽
+    (
+        input   wire                        clk             ,  //和FIFO时钟保持一致
+        input   wire                        rst_n           ,
+        input   wire                        calib_done      ,  //DDR3初始化完成标志
             
         //写端口   
-        output  reg [15:0]  wr_data         ,   //向写FIFO中写入的数据
-        output  reg         wr_en           ,   //写FIFO写使能
-        
-        //读端口
-        output  reg         rd_en           ,   //读FIFO读使能
-        output  reg         rd_mem_enable   ,   //读存储器使能, 为高时才能从DDR3 SDRAM中读取数据
-        input   wire        rd_valid            //读有效信号, 为高时代表读取的数据有效
+        output  reg [FIFO_WR_WIDTH-1:0]     wr_data         ,   //向写FIFO中写入的数据
+        output  reg                         wr_en           ,   //写FIFO写使能
+                        
+        //读端口               
+        output  reg                         rd_en           ,   //读FIFO读使能
+        output  reg                         rd_mem_enable   ,   //读存储器使能, 为高时才能从DDR3 SDRAM中读取数据
+        input   wire                        rd_valid            //读有效信号, 为高时代表读取的数据有效
     );
     
     //wr_en
@@ -39,9 +41,9 @@ module testdata_gen_valid(
     //wr_data
     always@(posedge clk or negedge rst_n) begin
         if(~rst_n) begin
-            wr_data <= 16'd0;
+            wr_data <= 'd0;
         end else if(wr_en) begin  //每次写入FIFO的时候数据自增一
-            wr_data <= wr_data + 16'd1;
+            wr_data <= wr_data + 'd1;
         end else begin
             wr_data <= wr_data;
         end
@@ -51,7 +53,7 @@ module testdata_gen_valid(
     always@(posedge clk or negedge rst_n) begin
         if(~rst_n) begin
             rd_mem_enable <= 1'b0;
-        end else if(wr_data == 16'd1300) begin  //数据已经写完, 可以确保DDR3 SDRAM中已经有数据
+        end else if(wr_data == 'd1300) begin  //数据已经写完, 可以确保DDR3 SDRAM中已经有数据
             rd_mem_enable <= 1'b1;
         end else begin
             rd_mem_enable <= rd_mem_enable;

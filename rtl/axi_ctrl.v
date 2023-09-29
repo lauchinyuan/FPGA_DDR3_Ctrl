@@ -7,45 +7,48 @@
 // Description: AXI控制器, 依据AXI读写主机发来的读写信号, 自动产生AXI读写请求、读写地址以及读写突发长度
 //////////////////////////////////////////////////////////////////////////////////
 
-module axi_ctrl(
-        input   wire        clk             , //AXI读写主机时钟
-        input   wire        rst_n           , 
-                
-        //用户端    
-        input   wire        wr_clk          , //写FIFO写时钟
-        input   wire        wr_rst          , //写复位
-        input   wire [29:0] wr_beg_addr     , //写起始地址
-        input   wire [29:0] wr_end_addr     , //写终止地址
-        input   wire [7:0]  wr_burst_len    , //写突发长度
-        input   wire        wr_en           , //写FIFO写请求
-        input   wire [15:0] wr_data         , //写FIFO写数据 
-        input   wire        rd_clk          , //读FIFO读时钟
-        input   wire        rd_rst          , //读复位
-        input   wire        rd_mem_enable   , //读存储器使能,防止存储器未写先读
-        input   wire [29:0] rd_beg_addr     , //读起始地址
-        input   wire [29:0] rd_end_addr     , //读终止地址
-        input   wire [7:0]  rd_burst_len    , //读突发长度
-        input   wire        rd_en           , //读FIFO读请求
-        output  wire [15:0] rd_data         , //读FIFO读数据
-        output  wire        rd_valid        , //读FIFO可读标志,表示读FIFO中有数据可以对外输出
+module axi_ctrl
+    #(parameter FIFO_WR_WIDTH = 5'd16,  //用户端FIFO读写位宽
+                FIFO_RD_WIDTH = 5'd16)
+    (
+        input   wire                        clk             , //AXI读写主机时钟
+        input   wire                        rst_n           , 
+                                
+        //用户端                   
+        input   wire                        wr_clk          , //写FIFO写时钟
+        input   wire                        wr_rst          , //写复位
+        input   wire [29:0]                 wr_beg_addr     , //写起始地址
+        input   wire [29:0]                 wr_end_addr     , //写终止地址
+        input   wire [7:0]                  wr_burst_len    , //写突发长度
+        input   wire                        wr_en           , //写FIFO写请求
+        input   wire [FIFO_WR_WIDTH-1:0]    wr_data         , //写FIFO写数据 
+        input   wire                        rd_clk          , //读FIFO读时钟
+        input   wire                        rd_rst          , //读复位
+        input   wire                        rd_mem_enable   , //读存储器使能,防止存储器未写先读
+        input   wire [29:0]                 rd_beg_addr     , //读起始地址
+        input   wire [29:0]                 rd_end_addr     , //读终止地址
+        input   wire [7:0]                  rd_burst_len    , //读突发长度
+        input   wire                        rd_en           , //读FIFO读请求
+        output  wire [FIFO_RD_WIDTH-1:0]    rd_data         , //读FIFO读数据
+        output  wire                        rd_valid        , //读FIFO可读标志,表示读FIFO中有数据可以对外输出
         
         //写AXI主机
-        input   wire        axi_writing     , //AXI主机写正在进行
-        input   wire        axi_wr_ready    , //AXI主机写准备好
-        output  reg         axi_wr_start    , //AXI主机写请求
-        output  wire [63:0] axi_wr_data     , //从写FIFO中读取的数据,写入AXI写主机
-        output  reg  [29:0] axi_wr_addr     , //AXI主机写地址
-        output  wire [7:0]  axi_wr_len      , //AXI主机写突发长度
-        input   wire        axi_wr_done     , //AXI主机完成一次写操作
-        
-        //读AXI主机
-        input   wire        axi_reading     , //AXI主机读正在进行
-        input   wire        axi_rd_ready    , //AXI主机读准备好
-        output  reg         axi_rd_start    , //AXI主机读请求
-        input   wire [63:0] axi_rd_data     , //从AXI读主机读到的数据,写入读FIFO
-        output  reg  [29:0] axi_rd_addr     , //AXI主机读地址
-        output  wire [7:0]  axi_rd_len      , //AXI主机读突发长度 
-        input   wire        axi_rd_done       //AXI主机完成一次写操作
+        input   wire                        axi_writing     , //AXI主机写正在进行
+        input   wire                        axi_wr_ready    , //AXI主机写准备好
+        output  reg                         axi_wr_start    , //AXI主机写请求
+        output  wire [63:0]                 axi_wr_data     , //从写FIFO中读取的数据,写入AXI写主机
+        output  reg  [29:0]                 axi_wr_addr     , //AXI主机写地址
+        output  wire [7:0]                  axi_wr_len      , //AXI主机写突发长度
+        input   wire                        axi_wr_done     , //AXI主机完成一次写操作
+                        
+        //读AXI主机                
+        input   wire                        axi_reading     , //AXI主机读正在进行
+        input   wire                        axi_rd_ready    , //AXI主机读准备好
+        output  reg                         axi_rd_start    , //AXI主机读请求
+        input   wire [63:0]                 axi_rd_data     , //从AXI读主机读到的数据,写入读FIFO
+        output  reg  [29:0]                 axi_rd_addr     , //AXI主机读地址
+        output  wire [7:0]                  axi_rd_len      , //AXI主机读突发长度 
+        input   wire                        axi_rd_done       //AXI主机完成一次写操作
         
     );
     

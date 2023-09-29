@@ -10,10 +10,12 @@
 module ddr3_test
 #(parameter WR_BEG_ADDR     = 30'd0     ,
   parameter WR_END_ADDR     = 30'd8191  ,
-  parameter WR_BURST_LEN    = 8'd1      ,
+  parameter WR_BURST_LEN    = 8'd0      ,
   parameter RD_BEG_ADDR     = 30'd0     ,
-  parameter RD_END_ADDR     = 30'd2200  ,
-  parameter RD_BURST_LEN    = 8'd1      
+  parameter RD_END_ADDR     = 30'd2047  ,
+  parameter RD_BURST_LEN    = 8'd15     ,
+  parameter FIFO_WR_WIDTH   = 6'd32     ,
+  parameter FIFO_RD_WIDTH   = 6'd32     
   )
     (
         input   wire        clk           ,//50MHz时钟输入
@@ -55,20 +57,23 @@ module ddr3_test
     wire        calib_done     ; //DDR3初始化完成 */
     
     //进行ILA在线调试时, 使用这一段代码
-    (*mark_debug="true", dont_touch="true"*)wire        wr_en          ; //写FIFO写请求
-    (*mark_debug="true", dont_touch="true"*)wire [15:0] wr_data        ; //写FIFO写数据 
-    (*mark_debug="true", dont_touch="true"*)wire        rd_mem_enable  ; //读存储器使能,防
-    (*mark_debug="true", dont_touch="true"*)wire        rd_en          ; //读FIFO读请求
-    (*mark_debug="true", dont_touch="true"*)wire [15:0] rd_data        ; //读FIFO读数据
-    (*mark_debug="true", dont_touch="true"*)wire        rd_valid       ; //读FIFO有效标志   
-    (*mark_debug="true", dont_touch="true"*)wire        calib_done     ; //DDR3初始化完成    
+    (*mark_debug="true", dont_touch="true"*)wire                        wr_en          ; //写FIFO写请求
+    (*mark_debug="true", dont_touch="true"*)wire [FIFO_WR_WIDTH-1:0]    wr_data        ; //写FIFO写数据 
+    (*mark_debug="true", dont_touch="true"*)wire                        rd_mem_enable  ; //读存储器使能,防
+    (*mark_debug="true", dont_touch="true"*)wire                        rd_en          ; //读FIFO读请求
+    (*mark_debug="true", dont_touch="true"*)wire [FIFO_RD_WIDTH-1:0]    rd_data        ; //读FIFO读数据
+    (*mark_debug="true", dont_touch="true"*)wire                        rd_valid       ; //读FIFO有效标志   
+    (*mark_debug="true", dont_touch="true"*)wire                        calib_done     ; //DDR3初始化完成    
     
     wire        ui_clk         ; //MIG IP核输出的用户时钟, 用作AXI控制器时钟
     wire        ui_rst         ; //MIG IP核输出的复位信号, 高电平有效
        
     
     //测试数据生成模块
-    testdata_gen_valid testdata_gen_valid_inst(
+    testdata_gen_valid 
+    #(.FIFO_WR_WIDTH(FIFO_WR_WIDTH))
+    testdata_gen_valid_inst
+    (
         .clk             (clk_fifo        ),  //和FIFO时钟保持一致
         .rst_n           (locked_rst_n    ),
         .calib_done      (calib_done      ),  //DDR3初始化完成标志
@@ -101,7 +106,11 @@ module ddr3_test
     
     
     //DDR3接口模块
-    ddr_interface ddr_interface_inst(
+    ddr_interface 
+    #(.FIFO_WR_WIDTH(FIFO_WR_WIDTH),  //用户端FIFO读写位宽
+      .FIFO_RD_WIDTH(FIFO_RD_WIDTH))
+    ddr_interface_inst
+    (
         .clk                 (clk_ddr             ), //DDR3时钟, 也就是DDR3 MIG IP核参考时钟
         .rst_n               (locked_rst_n        ), 
                     

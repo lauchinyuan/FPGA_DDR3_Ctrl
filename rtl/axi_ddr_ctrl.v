@@ -8,74 +8,77 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module axi_ddr_ctrl(
-        input   wire        clk             , //AXI读写主机时钟
-        input   wire        rst_n           , 
-                
-        //用户端    
-        input   wire        wr_clk          , //写FIFO写时钟
-        input   wire        wr_rst          , //写复位
-        input   wire [29:0] wr_beg_addr     , //写起始地址
-        input   wire [29:0] wr_end_addr     , //写终止地址
-        input   wire [7:0]  wr_burst_len    , //写突发长度
-        input   wire        wr_en           , //写FIFO写请求
-        input   wire [15:0] wr_data         , //写FIFO写数据 
-        input   wire        rd_clk          , //读FIFO读时钟
-        input   wire        rd_rst          , //读复位
-        input   wire        rd_mem_enable   , //读存储器使能,防止存储器未写先读
-        input   wire [29:0] rd_beg_addr     , //读起始地址
-        input   wire [29:0] rd_end_addr     , //读终止地址
-        input   wire [7:0]  rd_burst_len    , //读突发长度
-        input   wire        rd_en           , //读FIFO读请求
-        output  wire [15:0] rd_data         , //读FIFO读数据
-        output  wire        rd_valid        , //读FIFO可读标志,表示读FIFO中有数据可以对外输出
-        
-        //AXI总线
-        //AXI4写地址通道
-        input   wire [3:0]  m_axi_awid      , 
-        output  wire [29:0] m_axi_awaddr    ,
-        output  wire [7:0]  m_axi_awlen     , //突发传输长度
-        output  wire [2:0]  m_axi_awsize    , //突发传输大小(Byte)
-        output  wire [1:0]  m_axi_awburst   , //突发类型
-        output  wire        m_axi_awlock    , 
-        output  wire [3:0]  m_axi_awcache   , 
-        output  wire [2:0]  m_axi_awprot    ,
-        output  wire [3:0]  m_axi_awqos     ,
-        output  wire        m_axi_awvalid   , //写地址valid
-        input   wire        m_axi_awready   , //从机发出的写地址ready
-        
-        //写数据通道
-        output  wire [63:0] m_axi_wdata     , //写数据
-        output  wire [7:0]  m_axi_wstrb     , //写数据有效字节线
-        output  wire        m_axi_wlast     , //最后一个数据标志
-        output  wire        m_axi_wvalid    , //写数据有效标志
-        input   wire        m_axi_wready    , //从机发出的写数据ready
-        
-        //写响应通道
-        output  wire [3:0]  m_axi_bid       ,
-        input   wire [1:0]  m_axi_bresp     , //响应信号,表征写传输是否成功
-        input   wire        m_axi_bvalid    , //响应信号valid标志
-        output  wire        m_axi_bready    , //主机响应ready信号
-        
-        //AXI4读地址通道
-        output  wire [3:0]  m_axi_arid      , 
-        output  wire [29:0] m_axi_araddr    ,
-        output  wire [7:0]  m_axi_arlen     , //突发传输长度
-        output  wire [2:0]  m_axi_arsize    , //突发传输大小(Byte)
-        output  wire [1:0]  m_axi_arburst   , //突发类型
-        output  wire        m_axi_arlock    , 
-        output  wire [3:0]  m_axi_arcache   , 
-        output  wire [2:0]  m_axi_arprot    ,
-        output  wire [3:0]  m_axi_arqos     ,
-        output  wire        m_axi_arvalid   , //读地址valid
-        input   wire        m_axi_arready   , //从机准备接收读地址
-        
-        //读数据通道
-        input   wire [63:0] m_axi_rdata     , //读数据
-        input   wire [1:0]  m_axi_rresp     , //收到的读响应
-        input   wire        m_axi_rlast     , //最后一个数据标志
-        input   wire        m_axi_rvalid    , //读数据有效标志
-        output  wire        m_axi_rready      //主机发出的读数据ready
+module axi_ddr_ctrl
+    #(parameter FIFO_WR_WIDTH = 5'd16,  //用户端FIFO读写位宽
+                FIFO_RD_WIDTH = 5'd16)
+        (
+        input   wire                        clk             , //AXI读写主机时钟
+        input   wire                        rst_n           , 
+                                
+        //用户端                   
+        input   wire                        wr_clk          , //写FIFO写时钟
+        input   wire                        wr_rst          , //写复位
+        input   wire [29:0]                 wr_beg_addr     , //写起始地址
+        input   wire [29:0]                 wr_end_addr     , //写终止地址
+        input   wire [7:0]                  wr_burst_len    , //写突发长度
+        input   wire                        wr_en           , //写FIFO写请求
+        input   wire [FIFO_WR_WIDTH-1:0]    wr_data         , //写FIFO写数据 
+        input   wire                        rd_clk          , //读FIFO读时钟
+        input   wire                        rd_rst          , //读复位
+        input   wire                        rd_mem_enable   , //读存储器使能,防止存储器未写先读
+        input   wire [29:0]                 rd_beg_addr     , //读起始地址
+        input   wire [29:0]                 rd_end_addr     , //读终止地址
+        input   wire [7:0]                  rd_burst_len    , //读突发长度
+        input   wire                        rd_en           , //读FIFO读请求
+        output  wire [FIFO_RD_WIDTH-1:0]    rd_data         , //读FIFO读数据
+        output  wire                        rd_valid        , //读FIFO可读标志,表示读FIFO中有数据可以对外输出
+                        
+        //AXI总线             
+        //AXI4写地址通道             
+        input   wire [3:0]                  m_axi_awid      , 
+        output  wire [29:0]                 m_axi_awaddr    ,
+        output  wire [7:0]                  m_axi_awlen     , //突发传输长度
+        output  wire [2:0]                  m_axi_awsize    , //突发传输大小(Byte)
+        output  wire [1:0]                  m_axi_awburst   , //突发类型
+        output  wire                        m_axi_awlock    , 
+        output  wire [3:0]                  m_axi_awcache   , 
+        output  wire [2:0]                  m_axi_awprot    ,
+        output  wire [3:0]                  m_axi_awqos     ,
+        output  wire                        m_axi_awvalid   , //写地址valid
+        input   wire                        m_axi_awready   , //从机发出的写地址ready
+                        
+        //写数据通道             
+        output  wire [63:0]                 m_axi_wdata     , //写数据
+        output  wire [7:0]                  m_axi_wstrb     , //写数据有效字节线
+        output  wire                        m_axi_wlast     , //最后一个数据标志
+        output  wire                        m_axi_wvalid    , //写数据有效标志
+        input   wire                        m_axi_wready    , //从机发出的写数据ready
+                        
+        //写响应通道             
+        output  wire [3:0]                  m_axi_bid       ,
+        input   wire [1:0]                  m_axi_bresp     , //响应信号,表征写传输是否成功
+        input   wire                        m_axi_bvalid    , //响应信号valid标志
+        output  wire                        m_axi_bready    , //主机响应ready信号
+                        
+        //AXI4读地址通道             
+        output  wire [3:0]                  m_axi_arid      , 
+        output  wire [29:0]                 m_axi_araddr    ,
+        output  wire [7:0]                  m_axi_arlen     , //突发传输长度
+        output  wire [2:0]                  m_axi_arsize    , //突发传输大小(Byte)
+        output  wire [1:0]                  m_axi_arburst   , //突发类型
+        output  wire                        m_axi_arlock    , 
+        output  wire [3:0]                  m_axi_arcache   , 
+        output  wire [2:0]                  m_axi_arprot    ,
+        output  wire [3:0]                  m_axi_arqos     ,
+        output  wire                        m_axi_arvalid   , //读地址valid
+        input   wire                        m_axi_arready   , //从机准备接收读地址
+                        
+        //读数据通道             
+        input   wire [63:0]                 m_axi_rdata     , //读数据
+        input   wire [1:0]                  m_axi_rresp     , //收到的读响应
+        input   wire                        m_axi_rlast     , //最后一个数据标志
+        input   wire                        m_axi_rvalid    , //读数据有效标志
+        output  wire                        m_axi_rready      //主机发出的读数据ready
     );
     
     //连线
@@ -98,7 +101,11 @@ module axi_ddr_ctrl(
     wire        axi_rd_done     ;
     
     //AXI控制器
-    axi_ctrl axi_ctrl_inst(
+    axi_ctrl 
+    #(.FIFO_WR_WIDTH(FIFO_WR_WIDTH),  //用户端FIFO读写位宽
+      .FIFO_RD_WIDTH(FIFO_RD_WIDTH))
+      axi_ctrl_inst
+    (
         .clk             (clk             ), //AXI读写主机时钟
         .rst_n           (rst_n           ), 
  
