@@ -20,8 +20,6 @@ module tb_vga_ctrl(
     wire        vsync       ; //场同步
     wire        pix_req     ; //请求外部图像输入
     wire        pix_valid   ; //为高时代表输出的图像是有效数据帧
-    wire [9:0]  pix_x       ; //请求图像像素的横向坐标
-    wire [9:0]  pix_y       ; //请求图像像素的竖向坐标
     wire [23:0] rgb_out     ; //待测试输出的RGB图像信号
 
     
@@ -55,8 +53,6 @@ module tb_vga_ctrl(
         .vsync       (vsync       ), //场同步
         .pix_req     (pix_req     ), //请求外部图像输入
         .pix_valid   (pix_valid   ), //为高时代表输出的图像是有效数据帧
-        .pix_x       (pix_x       ), //请求图像像素的横向坐标
-        .pix_y       (pix_y       ), //请求图像像素的竖向坐标
         .rgb_out     (rgb_out     )  //输出的RGB图像信号
     );
 endmodule

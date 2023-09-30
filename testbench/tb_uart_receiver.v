@@ -81,7 +81,7 @@ module tb_uart_receiver(
                 9: rx <= 1'b1;
                 default: rx <= 1'b0;
             endcase
-        #(5207*20);  //每bit之间的时间差
+        #(5207*40);  //每bit之间的时间差
         end
     endtask
     
