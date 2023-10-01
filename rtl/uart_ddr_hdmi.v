@@ -18,10 +18,10 @@ module uart_ddr_hdmi
                 UI_FREQ       = 'd160_000_000   ,//DDR3控制器输出的用户时钟频率
                 FIFO_WR_BYTE  = 'd4             ,//写FIFO写端口字节数
                 WR_BEG_ADDR   = 'd0             ,//写FIFO写起始地址
-                WR_END_ADDR   = 'd819199        ,//写FIFO写终止地址
+                WR_END_ADDR   = 'd1228799       ,//写FIFO写终止地址
                 WR_BURST_LEN  = 'd15            ,//写FIFO写突发长度为WR_BURST_LEN+1
                 RD_BEG_ADDR   = 'd0             ,//读FIFO读起始地址
-                RD_END_ADDR   = 'd819199        ,//读FIFO读终止地址
+                RD_END_ADDR   = 'd1228799       ,//读FIFO读终止地址
                 RD_BURST_LEN  = 'd15             //读FIFO读突发长度为RD_BURST_LEN+1
     )
     (
@@ -108,7 +108,7 @@ module uart_ddr_hdmi
     key_ctrl_inst
     (
         .clk         (ui_clk        ),
-        .rst_n       (~ui_rst_n     ),
+        .rst_n       (~ui_rst       ),
         .key_in      (key_in        ),
         
         .state_out   (key_state_out )   
@@ -138,7 +138,7 @@ module uart_ddr_hdmi
     //VGA时序生成器
     vga_ctrl vga_ctrl_inst(
         .clk         (clk_fifo            ),
-        .rst_n       (calib_locked_rst_n  ),
+        .rst_n       (locked_calib_rst_n & rd_mem_enable),
         .rgb_in      (rd_data[31:8]       ), //输入的RGB图像信号
         
         .hsync       (hsync               ), //行同步

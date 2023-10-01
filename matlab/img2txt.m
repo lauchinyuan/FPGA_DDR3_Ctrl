@@ -1,6 +1,6 @@
 clc, clear;
 %% 像素数据获取
-file_name = "cloud_40_30"
+file_name = "szu_640_480"
 img = imread(fullfile("../img/",file_name+".jpg")); %读取原始文件
 [height, weight, channel] = size(img);  % 获取图片大小参数
 % 将图片同一像素位置上的RGB值排在一起构成RGB888数据
@@ -33,12 +33,12 @@ rgb32b = uint32(rgb32b); % 转换为整数
 % 三通道像素保存为txt文件
 txt_path = "../txt/"+file_name+".txt"; % 文件路径
 fid = fopen(txt_path, "w");
-fprintf(fid,"%02x\n",imgrgb);  % 输出至文件
+fprintf(fid,"%02x",imgrgb);  % 输出至文件
 fclose(fid);
 
 % 32bit像素保存为txt文件
 txt_path = "../txt/"+file_name+"_uint32.txt"; % 文件路径
 fid = fopen(txt_path, "w");
-fprintf(fid,"%08x\n",rgb32b);  % 输出至文件
+fprintf(fid,"%08x",rgb32b);  % 输出至文件
 fclose(fid);
 
