@@ -177,8 +177,8 @@ module axi_ctrl
     always@(posedge clk or negedge rst_n) begin
         if(~rst_n) begin
             axi_rd_addr <= rd_beg_addr;  //初始化为起始地址
-        end else if(wr_rst) begin
-            axi_rd_addr <= rd_beg_addr;
+        end else if(rd_rst) begin
+            axi_rd_addr <= rd_beg_addr;  //人工读复位时,初始化为起始地址
         end else if(axi_rd_done && axi_rd_addr > (rd_end_addr - {burst_rd_addr_inc[28:0], 1'b0} + 30'd1)) begin 
         //每次写完成后判断是否超限, 下一个写首地址后续的空间已经不够再进行一次突发写操作, 位拼接的作用是×2
             axi_rd_addr <= rd_beg_addr;
@@ -233,7 +233,7 @@ module axi_ctrl
     
     //读FIFO, 从SDRAM中读出的数据先暂存于此
 	rd_fifo rd_fifo_inst (
-        .rst                (~rst_n             ),  
+        .rst                (~rst_n | rd_rst    ),  
         .wr_clk             (clk                ),  //写端口时钟是AXI主机时钟, 从axi_master_rd模块写入数据
         .rd_clk             (rd_clk             ),  //读端口时钟
         .din                (axi_rd_data        ),  //从axi_master_rd模块写入数据

@@ -24,43 +24,62 @@ module vga_ctrl(
     );
     
     //图像帧相关参数定义
-    //640*480为例
-    parameter   HSYNC_CNT     =   10'd96  , //行同步至同步阶段结束累计像素周期
-                HSYNC_LEDGE   =   10'd144 , //行同步至左边框阶段结束累计像素周期
-                HSYNC_PIX     =   10'd784 , //行同步至有效数据阶段结束累计像素周期
-                HSYNC_END     =   10'd800 , //行同步扫描总周期
-                VSYNC_CNT     =   10'd2   , //场同步至同步阶段结束累计行周期
-                VSYNC_LEDGE   =   10'd35  , //场同步至左边框阶段结束累计行周期
-                VSYNC_PIX     =   10'd515 , //场同步至有效数据阶段结束累计行周期
-                VSYNC_END     =   10'd525 ; //场同步扫描总周期
+/*     //640*480
+    parameter   HSYNC_CNT     =   11'd96  , //行同步至同步阶段结束累计像素周期
+                HSYNC_LEDGE   =   11'd144 , //行同步至左边框阶段结束累计像素周期
+                HSYNC_PIX     =   11'd784 , //行同步至有效数据阶段结束累计像素周期
+                HSYNC_END     =   11'd800 , //行同步扫描总周期
+                VSYNC_CNT     =   11'd2   , //场同步至同步阶段结束累计行周期
+                VSYNC_LEDGE   =   11'd35  , //场同步至左边框阶段结束累计行周期
+                VSYNC_PIX     =   11'd515 , //场同步至有效数据阶段结束累计行周期
+                VSYNC_END     =   11'd525 ; //场同步扫描总周期 */
+
+/*     //1920*1080
+    parameter   HSYNC_CNT     =   11'd112  , //行同步至同步阶段结束累计像素周期
+                HSYNC_LEDGE   =   11'd360  , //行同步至左边框阶段结束累计像素周期
+                HSYNC_PIX     =   11'd1640 , //行同步至有效数据阶段结束累计像素周期
+                HSYNC_END     =   11'd1688 , //行同步扫描总周期
+                VSYNC_CNT     =   11'd3    , //场同步至同步阶段结束累计行周期
+                VSYNC_LEDGE   =   11'd41   , //场同步至左边框阶段结束累计行周期
+                VSYNC_PIX     =   11'd1065 , //场同步至有效数据阶段结束累计行周期
+                VSYNC_END     =   11'd1066 ; //场同步扫描总周期 */
+    //1280*960           
+    parameter   HSYNC_CNT     =   11'd112  , //行同步至同步阶段结束累计像素周期
+                HSYNC_LEDGE   =   11'd424  , //行同步至左边框阶段结束累计像素周期
+                HSYNC_PIX     =   11'd1704 , //行同步至有效数据阶段结束累计像素周期
+                HSYNC_END     =   11'd1800 , //行同步扫描总周期
+                VSYNC_CNT     =   11'd3    , //场同步至同步阶段结束累计行周期
+                VSYNC_LEDGE   =   11'd39   , //场同步至左边框阶段结束累计行周期
+                VSYNC_PIX     =   11'd999  , //场同步至有效数据阶段结束累计行周期
+                VSYNC_END     =   11'd1000 ; //场同步扫描总周期
 /*                 PIX_X         =   10'd640 , //图像横向大小
                 PIX_Y         =   10'd480 ; //图像竖向大小 */
     
     
     
     //中间辅助信号
-    reg [9:0]   cnt_h   ; //依据计数值, 辅助产生行同步信号hsync
-    reg [9:0]   cnt_v   ; //依据计数值, 辅助产生场同步信号vsync
+    reg [10:0]   cnt_h   ; //依据计数值, 辅助产生行同步信号hsync
+    reg [10:0]   cnt_v   ; //依据计数值, 辅助产生场同步信号vsync
     
     //cnt_h
     always@(posedge clk or negedge rst_n) begin
         if(~rst_n) begin
-            cnt_h <= 10'd0;
-        end else if(cnt_h == HSYNC_END - 10'd1) begin
-            cnt_h <= 10'd0;
+            cnt_h <= 11'd0;
+        end else if(cnt_h == HSYNC_END - 11'd1) begin
+            cnt_h <= 11'd0;
         end else begin
-            cnt_h <= cnt_h + 10'd1;
+            cnt_h <= cnt_h + 11'd1;
         end
     end
     
     //cnt_v
     always@(posedge clk or negedge rst_n) begin
         if(~rst_n) begin
-            cnt_v <= 10'd0;
-        end else if(cnt_h == HSYNC_END - 10'd1 && cnt_v == VSYNC_END - 10'd1) begin  //计数到最大值
-            cnt_v <= 10'd0;
-        end else if(cnt_h == HSYNC_END - 10'd1) begin  //每完成一行扫描, cnt_v自增1
-            cnt_v <= cnt_v + 10'd1;
+            cnt_v <= 11'd0;
+        end else if(cnt_h == HSYNC_END - 11'd1 && cnt_v == VSYNC_END - 11'd1) begin  //计数到最大值
+            cnt_v <= 11'd0;
+        end else if(cnt_h == HSYNC_END - 11'd1) begin  //每完成一行扫描, cnt_v自增1
+            cnt_v <= cnt_v + 11'd1;
         end else begin
             cnt_v <= cnt_v;
         end
@@ -87,7 +106,7 @@ module vga_ctrl(
     //pix_req
     //有效图像数据将滞后请求一个时钟周期
     always@(*) begin
-        if(cnt_v >= VSYNC_LEDGE && cnt_v < VSYNC_PIX && cnt_h >= (HSYNC_LEDGE - 10'd1) && cnt_h < (HSYNC_PIX - 10'd1)) begin
+        if(cnt_v >= VSYNC_LEDGE && cnt_v < VSYNC_PIX && cnt_h >= (HSYNC_LEDGE - 11'd1) && cnt_h < (HSYNC_PIX - 11'd1)) begin
             pix_req = 1'b1;
         end else begin
             pix_req = 1'b0;

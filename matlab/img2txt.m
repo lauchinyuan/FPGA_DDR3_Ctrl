@@ -1,6 +1,6 @@
 clc, clear;
 %% 像素数据获取
-file_name = "szu_640_480"
+file_name = "fisherGirlStatue_1280_960";
 img = imread(fullfile("../img/",file_name+".jpg")); %读取原始文件
 [height, weight, channel] = size(img);  % 获取图片大小参数
 % 将图片同一像素位置上的RGB值排在一起构成RGB888数据

@@ -13,16 +13,16 @@
 module uart_ddr_hdmi
     #(parameter FIFO_WR_WIDTH = 'd32            ,//用户端FIFO写位宽
                 FIFO_RD_WIDTH = 'd32            ,//用户端FIFO读位宽
-                UART_BPS      = 'd460800        ,//串口波特率
-                UART_CLK_FREQ = 'd25_000_000    ,//串口时钟频率
+                UART_BPS      = 'd1500000       ,//串口波特率
+                UART_CLK_FREQ = 'd100_000_000   ,//串口时钟频率
                 UI_FREQ       = 'd160_000_000   ,//DDR3控制器输出的用户时钟频率
                 FIFO_WR_BYTE  = 'd4             ,//写FIFO写端口字节数
                 WR_BEG_ADDR   = 'd0             ,//写FIFO写起始地址
-                WR_END_ADDR   = 'd1228799       ,//写FIFO写终止地址
-                WR_BURST_LEN  = 'd15            ,//写FIFO写突发长度为WR_BURST_LEN+1
+                WR_END_ADDR   = 'd4915199       ,//写FIFO写终止地址
+                WR_BURST_LEN  = 'd31            ,//写FIFO写突发长度为WR_BURST_LEN+1
                 RD_BEG_ADDR   = 'd0             ,//读FIFO读起始地址
-                RD_END_ADDR   = 'd1228799       ,//读FIFO读终止地址
-                RD_BURST_LEN  = 'd15             //读FIFO读突发长度为RD_BURST_LEN+1
+                RD_END_ADDR   = 'd4915199       ,//读FIFO读终止地址
+                RD_BURST_LEN  = 'd31             //读FIFO读突发长度为RD_BURST_LEN+1
     )
     (
         input   wire        clk           , //系统时钟
@@ -170,29 +170,29 @@ module uart_ddr_hdmi
       .FIFO_RD_WIDTH(FIFO_RD_WIDTH))
       ddr_interface_inst
         (
-        .clk                 (clk_ddr             ), //DDR3时钟, 也就是DDR3 MIG IP核参考时钟
-        .rst_n               (locked_rst_n        ), 
-                    
-        //用户端       
-        .wr_clk              (clk_fifo            ), //写FIFO写时钟
-        .wr_rst              (~locked_rst_n       ), //写复位
-        .wr_beg_addr         (WR_BEG_ADDR         ), //写起始地址
-        .wr_end_addr         (WR_END_ADDR         ), //写终止地址
-        .wr_burst_len        (WR_BURST_LEN        ), //写突发长度
-        .wr_en               (fifo_wr_en          ), //写FIFO写请求
-        .wr_data             (fifo_wr_data        ), //写FIFO写数据 
-        .rd_clk              (clk_fifo            ), //读FIFO读时钟
-        .rd_rst              (~locked_rst_n       ), //读复位
-        .rd_mem_enable       (rd_mem_enable       ), //读存储器使能,防止存储器未写先读
-        .rd_beg_addr         (RD_BEG_ADDR         ), //读起始地址
-        .rd_end_addr         (RD_END_ADDR         ), //读终止地址
-        .rd_burst_len        (RD_BURST_LEN        ), //读突发长度
-        .rd_en               (rd_en               ), //读FIFO读请求
-        .rd_data             (rd_data             ), //读FIFO读数据
-        .rd_valid            (rd_valid            ), //读FIFO有效标志
-        .ui_clk              (ui_clk              ), //MIG IP核输出的用户时钟, 用作AXI控制器时钟
-        .ui_rst              (ui_rst              ), //MIG IP核输出的复位信号, 高电平有效
-        .calib_done          (calib_done          ), //DDR3初始化完成
+        .clk                 (clk_ddr                           ), //DDR3时钟, 也就是DDR3 MIG IP核参考时钟
+        .rst_n               (locked_rst_n                      ), 
+                                    
+        //用户端                       
+        .wr_clk              (clk_fifo                          ), //写FIFO写时钟
+        .wr_rst              (~locked_rst_n                     ), //写复位
+        .wr_beg_addr         (WR_BEG_ADDR                       ), //写起始地址
+        .wr_end_addr         (WR_END_ADDR                       ), //写终止地址
+        .wr_burst_len        (WR_BURST_LEN                      ), //写突发长度
+        .wr_en               (fifo_wr_en                        ), //写FIFO写请求
+        .wr_data             (fifo_wr_data                      ), //写FIFO写数据 
+        .rd_clk              (clk_fifo                          ), //读FIFO读时钟
+        .rd_rst              ((~locked_rst_n) | (~rd_mem_enable)), //读复位, 没有开始使能读时,读地址处于0
+        .rd_mem_enable       (rd_mem_enable                     ), //读存储器使能,防止存储器未写先读
+        .rd_beg_addr         (RD_BEG_ADDR                       ), //读起始地址
+        .rd_end_addr         (RD_END_ADDR                       ), //读终止地址
+        .rd_burst_len        (RD_BURST_LEN                      ), //读突发长度
+        .rd_en               (rd_en                             ), //读FIFO读请求
+        .rd_data             (rd_data                           ), //读FIFO读数据
+        .rd_valid            (rd_valid                          ), //读FIFO有效标志
+        .ui_clk              (ui_clk                            ), //MIG IP核输出的用户时钟, 用作AXI控制器时钟
+        .ui_rst              (ui_rst                            ), //MIG IP核输出的复位信号, 高电平有效
+        .calib_done          (calib_done                        ), //DDR3初始化完成
         
         //DDR3接口                              
         .ddr3_addr           (ddr3_addr           ),  
