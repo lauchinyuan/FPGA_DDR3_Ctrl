@@ -98,7 +98,8 @@ module axi_ctrl
             axi_rd_start <= 1'b0;
         end else if(~axi_rd_ready) begin  //axi_rd_ready低,代表AXI读主机正在进行数据读取, start信号已经被响应
             axi_rd_start <= 1'b0;
-        end else if(rd_mem_enable && cnt_rd_fifo_wrport < real_rd_len && axi_rd_ready) begin //为了让FIFO能保持一定数据量,此处条件放宽
+/*         end else if(rd_mem_enable && cnt_rd_fifo_wrport < real_rd_len && axi_rd_ready) begin  */
+        end else if(rd_mem_enable && cnt_rd_fifo_wrport < 512 && axi_rd_ready) begin //为了让FIFO能保持一定数据量,此处条件放宽
             //读FIFO中的数据存量不足, AXI读主机已经准备好, 且允许读存储器
             axi_rd_start <= 1'b1;
         end else begin
@@ -178,7 +179,7 @@ module axi_ctrl
         if(~rst_n) begin
             axi_rd_addr <= rd_beg_addr;  //初始化为起始地址
         end else if(rd_rst) begin
-            axi_rd_addr <= rd_beg_addr;  //人工读复位时,初始化为起始地址
+            axi_rd_addr <= rd_beg_addr;  //人工读复位时,读FIFO中已有少量数据,则下次读取的地址应该更大
         end else if(axi_rd_done && axi_rd_addr > (rd_end_addr - {burst_rd_addr_inc[28:0], 1'b0} + 30'd1)) begin 
         //每次写完成后判断是否超限, 下一个写首地址后续的空间已经不够再进行一次突发写操作, 位拼接的作用是×2
             axi_rd_addr <= rd_beg_addr;
