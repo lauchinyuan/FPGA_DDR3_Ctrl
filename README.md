@@ -2,13 +2,7 @@
 
 本项目在Xilinx FPGA平台上实现了对DDR3 SDRAM读写操作，并通过RS232串口将图像数据存到SDRAM存储器，接着读取存储数据内容，并通过HDMI音视频接口实现图像显示，其中DDR3读写控制器是AXI总线接口从机。
 
-本仓库提供了所有模块的[Verilog 代码](./rtl)，其中比较关键的模块是[AXI写主机](./rtl/axi_master_wr.v)、[AXI读主机](./rtl/axi_master_rd.v)、[AXI控制器](./rtl/axi_ctrl.v)，这三个模块加上AXI总线 DDR3 MIG IP核，构成了[DDR3读写接口](./rtl/ddr_interface.v)。
-
-[testbench](./testbench)目录提供了几乎所有子模块的仿真测试文件，[wave](./wave)目录下提供了本工程子模块的简要波形示意图，**配合波形图将有助您理解本工程的设计细节**。
-
-[xci](./xci)目录存放了项目中用到的所有IP核文件配置信息，在Vivado中作为source添加即可，其中rgb2dvi IP核使用[Digilent开源IP核](https://github.com/Digilent/vivado-library/tree/master/ip)，需要在Vivado上添加IP核仓库。
-
-图像数据处理方面, [matlab](./matlab)目录提供了将图像转换为16进制像素值txt文件的MATLAB脚本。而[img](./img)文件夹则是一些测试图像文件，[txt](,/txt)文件夹是转换后的数据文本文件, 可以通过串口发送。
+**若您想复现该工程，请先阅读本文最后一段，有任何问题欢迎您通过lauchinyuan@yeah.net联系我，一起探讨学习。**
 
 FPGA上板实验的效果如图1-2所示，硬件实验平台使用的是博宸精芯Kintex-7基础板开发板，芯片型号为XC7K325T-2FFG676，在其它硬件平台上复现该工程时，应注意更改约束文件中的管脚约束，同时MIG IP核也应该依据所用硬件平台的SDRAM型号进行相应更改。
 
@@ -20,7 +14,15 @@ FPGA上板实验的效果如图1-2所示，硬件实验平台使用的是博宸�
 
 <center>图2. 演示2</center>
 
-本仓库所有代码均有较为详细的注释说明，有任何问题欢迎您通过lauchinyuan@yeah.net联系我，一起探讨学习。
+#### 仓库内容简介
+
+本仓库提供了所有模块的[Verilog 代码](./rtl)，其中比较关键的模块是[AXI写主机](./rtl/axi_master_wr.v)、[AXI读主机](./rtl/axi_master_rd.v)、[AXI控制器](./rtl/axi_ctrl.v)，这三个模块加上AXI总线 DDR3 MIG IP核，构成了[DDR3读写接口](./rtl/ddr_interface.v)。
+
+[testbench](./testbench)目录提供了几乎所有子模块的仿真测试文件，[wave](./wave)目录下提供了本工程子模块的简要波形示意图，**配合波形图将有助您理解本工程的设计细节**。
+
+[xci](./xci)目录存放了项目中用到的所有IP核文件配置信息，在Vivado中作为source添加即可，其中rgb2dvi IP核使用[Digilent开源IP核](https://github.com/Digilent/vivado-library/tree/master/ip)，需要在Vivado上添加IP核仓库。
+
+图像数据处理方面， [matlab](./matlab)目录提供了将图像转换为16进制像素值txt文件的MATLAB脚本。而[img](./img)文件夹则是一些测试图像文件，[txt](，/txt)文件夹是转换后的数据文本文件， 可以通过串口发送。
 
 #### 数据流&框图
 
@@ -41,3 +43,13 @@ FPGA上板实验的效果如图1-2所示，硬件实验平台使用的是博宸�
 7. VGA模块获得数据，并生成VGA时序。
 8. 通过rgb2dvi IP核将VGA时序转换为HDMI TMDS时序，通过HDMI接口将图像输出到屏幕上。
 
+#### 复现需注意！
+
+1. 若您想测试通过在线逻辑分析仪(ILA)， 简单分析ddr读写功能，而不进行图像显示，请将[ddr3_test](./rtl/ddr3_test.v)模块置为顶层，并将[ddr3_test.xdc](./constrs/ddr3_test.xdc)设置为target约束文件。否则顶层模块是[uart_ddr_hdmi](./rtl/uart_ddr_hdmi.v)，约束文件为[uart_ddr_hdmi.xdc](./constrs/uart_ddr_hdmi.xdc) 
+
+2. 图像显示使用RGB888格式，为了可以在一个时钟周期内得到一个像素数据，实际上从“读FIFO”中获取的数据位宽为32bit， 数据从高到低分别为R、G、B、0 ，最低位舍去。
+3. 为了正确显示图像，[顶层模块](./rtl/ddr3_test.v)中设置的的读写地址空间parameter应该与所显示图像分辨率相匹配，例如显示分辨率为1280*960，则寻址空间范围应该是 1280 × 960 × 4 =  4915200（如2， 每一个像素实际上的存储空间是32bit，即4Byte）。当然，也可以设置为这个值的整数倍，这样才不会造成图像在显示过程中的位置漂移。
+
+4. 更改图像分辨率，请在[vga_ctrl](./rtl/vga_ctrl.v)模块更改parameter， 注意要更改时钟生成IP核(clk_gen)的时钟频率(clk_fifo及clk_hdmi)， clk_fifo即vga时序的像素时钟，其中hdmi时钟频率和vga时钟频率要保持5：1的关系，更改频率后，也要注意更改顶层模块定义的FREQ parameter。
+
+有任何问题欢迎联系我(●ˇ∀ˇ●)
