@@ -13,17 +13,17 @@
 module uart_ddr_hdmi
     #(parameter FIFO_WR_WIDTH = 'd32            ,//用户端FIFO写位宽
                 FIFO_RD_WIDTH = 'd32            ,//用户端FIFO读位宽
-                UART_BPS      = 'd460800        ,//串口波特率
-                UART_CLK_FREQ = 'd25_000_000    ,//串口时钟频率
+                UART_BPS      = 'd1_500_000     ,//串口波特率
+                UART_CLK_FREQ = 'd100_000_000   ,//串口时钟频率
                 UI_FREQ       = 'd160_000_000   ,//DDR3控制器输出的用户时钟频率
                 FIFO_WR_BYTE  = 'd4             ,//写FIFO写端口字节数
                 WR_BEG_ADDR   = 'd0             ,//写FIFO写起始地址
-/*                 WR_END_ADDR   = 'd4915199       ,//写FIFO写终止地址 */
-                WR_END_ADDR   = 'd1228799       ,
+                WR_END_ADDR   = 'd4915199       ,//写FIFO写终止地址 
+//                WR_END_ADDR   = 'd1228799       ,
                 WR_BURST_LEN  = 'd31            ,//写FIFO写突发长度为WR_BURST_LEN+1
                 RD_BEG_ADDR   = 'd0             ,//读FIFO读起始地址
-/*                 RD_END_ADDR   = 'd4915199       ,//读FIFO读终止地址 */
-                RD_END_ADDR   = 'd1228799       ,
+                RD_END_ADDR   = 'd4915199       ,//读FIFO读终止地址 
+//                RD_END_ADDR   = 'd1228799       ,
                 RD_BURST_LEN  = 'd31              //读FIFO读突发长度为RD_BURST_LEN+1
     )
     (

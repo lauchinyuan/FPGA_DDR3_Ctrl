@@ -63,7 +63,7 @@ module axi_ctrl
     wire        rd_fifo_empty           ;  //读FIFO空标志
     wire        rd_fifo_wr_rst_busy     ;  //读FIFO正在初始化,此时先不向SDRAM发出读取请求, 否则将有数据丢失
         
-/*     reg         axi_wr_start_d          ;  //axi_wr_start打一拍,用于上升沿提取
+/*  reg         axi_wr_start_d          ;  //axi_wr_start打一拍,用于上升沿提取
     reg         axi_rd_start_d          ;  //axi_rd_start打一拍,用于上升沿提取
     wire        axi_wr_start_raise      ;  //axi_wr_start上升沿
     wire        axi_rd_start_raise      ;  //axi_rd_start上升沿 */
