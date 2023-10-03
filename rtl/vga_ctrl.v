@@ -17,14 +17,14 @@ module vga_ctrl(
         output  reg         hsync       , //行同步
         output  reg         vsync       , //场同步
         output  reg         pix_req     , //请求外部图像输入
-        output  reg         pix_valid   , //为高时代表输出的图像是有效数据帧
+        output  wire        pix_valid   , //为高时代表输出的图像是有效数据帧
 /*         output  reg  [9:0]  pix_x       , //请求图像像素的横向坐标
         output  reg  [9:0]  pix_y       , //请求图像像素的竖向坐标 */
         output  wire [23:0] rgb_out       //输出的RGB图像信号
     );
     
     //图像帧相关参数定义
-/*     //640*480
+    //640*480
     parameter   HSYNC_CNT     =   11'd96  , //行同步至同步阶段结束累计像素周期
                 HSYNC_LEDGE   =   11'd144 , //行同步至左边框阶段结束累计像素周期
                 HSYNC_PIX     =   11'd784 , //行同步至有效数据阶段结束累计像素周期
@@ -32,7 +32,7 @@ module vga_ctrl(
                 VSYNC_CNT     =   11'd2   , //场同步至同步阶段结束累计行周期
                 VSYNC_LEDGE   =   11'd35  , //场同步至左边框阶段结束累计行周期
                 VSYNC_PIX     =   11'd515 , //场同步至有效数据阶段结束累计行周期
-                VSYNC_END     =   11'd525 ; //场同步扫描总周期 */
+                VSYNC_END     =   11'd525 ; //场同步扫描总周期
 
 /*     //1920*1080
     parameter   HSYNC_CNT     =   11'd112  , //行同步至同步阶段结束累计像素周期
@@ -44,14 +44,14 @@ module vga_ctrl(
                 VSYNC_PIX     =   11'd1065 , //场同步至有效数据阶段结束累计行周期
                 VSYNC_END     =   11'd1066 ; //场同步扫描总周期 */
     //1280*960           
-    parameter   HSYNC_CNT     =   11'd112  , //行同步至同步阶段结束累计像素周期
+/*     parameter   HSYNC_CNT     =   11'd112  , //行同步至同步阶段结束累计像素周期
                 HSYNC_LEDGE   =   11'd424  , //行同步至左边框阶段结束累计像素周期
                 HSYNC_PIX     =   11'd1704 , //行同步至有效数据阶段结束累计像素周期
                 HSYNC_END     =   11'd1800 , //行同步扫描总周期
                 VSYNC_CNT     =   11'd3    , //场同步至同步阶段结束累计行周期
                 VSYNC_LEDGE   =   11'd39   , //场同步至左边框阶段结束累计行周期
                 VSYNC_PIX     =   11'd999  , //场同步至有效数据阶段结束累计行周期
-                VSYNC_END     =   11'd1000 ; //场同步扫描总周期
+                VSYNC_END     =   11'd1000 ; //场同步扫描总周期 */
 /*                 PIX_X         =   10'd640 , //图像横向大小
                 PIX_Y         =   10'd480 ; //图像竖向大小 */
     
@@ -113,7 +113,7 @@ module vga_ctrl(
         end
     end
     
-    //有效图像数据标志, 实际上是pix_req打一拍
+/*     //有效图像数据标志, 实际上是pix_req打一拍
     //pix_valid
     always@(posedge clk or negedge rst_n) begin
         if(~rst_n) begin
@@ -121,7 +121,8 @@ module vga_ctrl(
         end else begin
             pix_valid <= pix_req;
         end
-    end
+    end */
+    assign pix_valid = pix_req;  //由于实际使用的FIFO配置为First-word-Fall-Through模式,因此写使能即可立即获得有效数据
     
     //图像输出
     assign rgb_out = (pix_valid)?rgb_in:24'b0;  //当有效数据输出时,将输入的数据作为输出,否则输出0
