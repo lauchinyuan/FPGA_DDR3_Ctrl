@@ -129,7 +129,7 @@ module uart_ddr_hdmi
     uart_receiver_inst
     (
         .clk         (clk_fifo          ), //与FIFO时钟同步
-        .rst_n       (locked_calib_rst_n),
+        .rst_n       (locked_calib_rst_n), //SDRAM校准完成后才允许串口接收数据, 内含复位信号的同步释放处理
         .rx          (rx                ), //串口
         
         .fifo_wr_data(fifo_wr_data), //FIFO写数据
@@ -140,7 +140,7 @@ module uart_ddr_hdmi
     //VGA时序生成器
     vga_ctrl vga_ctrl_inst(
         .clk         (clk_fifo            ),
-        .rst_n       (locked_calib_rst_n & rd_mem_enable),
+        .rst_n       (locked_calib_rst_n & rd_mem_enable),  //模块内部会进行异步复位、同步释放处理
         .rgb_in      (rd_data[31:8]       ), //输入的RGB图像信号
         
         .hsync       (hsync               ), //行同步
@@ -173,7 +173,7 @@ module uart_ddr_hdmi
       ddr_interface_inst
         (
         .clk                 (clk_ddr                           ), //DDR3时钟, 也就是DDR3 MIG IP核参考时钟
-        .rst_n               (locked_rst_n                      ), 
+        .rst_n               (locked_rst_n                      ), //模块内部会进行异步复位、同步释放处理
                                     
         //用户端                       
         .wr_clk              (clk_fifo                          ), //写FIFO写时钟

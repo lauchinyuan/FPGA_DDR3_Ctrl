@@ -19,6 +19,9 @@ set_property IOSTANDARD LVCMOS33 [get_ports key_state_out]
 set_property IOSTANDARD LVCMOS33 [get_ports key_in]
 set_property IOSTANDARD LVCMOS33 [get_ports rx]
 
+# 设置异步时钟组
+set_clock_groups -asynchronous -name clk_groups -group [get_clocks {clk clk_hdmi_clk_gen clk_fifo_clk_gen}] -group [get_clocks {clk_ddr_clk_gen clk_pll_i}]
+
 # 用于程序固化的SPI配置
 set_property CFGBVS VCCO [current_design]
 set_property CONFIG_VOLTAGE 3.3 [current_design]

@@ -56,14 +56,32 @@ module vga_ctrl(
 //                PIX_Y         =   10'd480 ; //图像竖向大小
     
     
+    //同步释放复位信号
+    reg         rst_n_sync;
+    reg         rst_n_d1  ;  //同步器输出第一拍
     
     //中间辅助信号
     reg [10:0]   cnt_h   ; //依据计数值, 辅助产生行同步信号hsync
     reg [10:0]   cnt_v   ; //依据计数值, 辅助产生场同步信号vsync
     
-    //cnt_h
+    //本工程中输入的复位信号来自ui_clk时钟域, 本模块系统时钟为clk_fifo
+    //为减缓在复位信号释放时产生亚稳态之可能性
+    //采用异步复位同步释放方案, 同时在约束文件中将ui_clk至clk_fifo路径设为false_path
+    //rst_n_sync
     always@(posedge clk or negedge rst_n) begin
-        if(~rst_n) begin
+        if(~rst_n) begin    //异步复位
+            rst_n_d1    <= 1'b0;
+            rst_n_sync  <= 1'b0;
+        end else begin      //同步释放
+            rst_n_d1    <= 1'b1;
+            rst_n_sync  <= rst_n_d1;
+        end
+    end
+    
+    
+    //cnt_h
+    always@(posedge clk or negedge rst_n_sync) begin
+        if(~rst_n_sync) begin
             cnt_h <= 11'd0;
         end else if(cnt_h == HSYNC_END - 11'd1) begin
             cnt_h <= 11'd0;
@@ -73,8 +91,8 @@ module vga_ctrl(
     end
     
     //cnt_v
-    always@(posedge clk or negedge rst_n) begin
-        if(~rst_n) begin
+    always@(posedge clk or negedge rst_n_sync) begin
+        if(~rst_n_sync) begin
             cnt_v <= 11'd0;
         end else if(cnt_h == HSYNC_END - 11'd1 && cnt_v == VSYNC_END - 11'd1) begin  //计数到最大值
             cnt_v <= 11'd0;

@@ -25,6 +25,10 @@ module uart_receiver
         output  reg                     fifo_wr_en    //FIFO写使能
     );
     
+    //复位信号进行异步复位同步释放处理
+    reg             rst_n_sync  ;   //同步释放复位
+    reg             rst_n_d1    ;
+    
     //计数器,记满一个FIFO位宽的字节数时, 输出有效数据和FIFO写请求
     reg     [3:0]   cnt_byte    ;
     
@@ -33,9 +37,21 @@ module uart_receiver
     wire            po_flag     ;   //串转并后的数据有效标志信号
     
     
-    //cnt_byte
+    //同步释放处理
+    //rst_n_sync
     always@(posedge clk or negedge rst_n) begin
-        if(~rst_n) begin
+        if(~rst_n) begin                //异步复位
+            rst_n_d1    <= 1'b0     ;
+            rst_n_sync  <= 1'b0     ;
+        end else begin                  //同步释放
+            rst_n_d1    <= 1'b1     ;
+            rst_n_sync  <= rst_n_d1 ;
+        end
+    end
+    
+    //cnt_byte
+    always@(posedge clk or negedge rst_n_sync) begin
+        if(~rst_n_sync) begin
             cnt_byte <= 4'd0;
         end else if(po_flag && cnt_byte == (FIFO_WR_BYTE-1)) begin //计数到最大值
             cnt_byte <= 4'd0;
@@ -48,8 +64,8 @@ module uart_receiver
     
     //记满一个FIFO位宽的字节数时, 拉高写使能
     //fifo_wr_en
-    always@(posedge clk or negedge rst_n) begin
-        if(~rst_n) begin
+    always@(posedge clk or negedge rst_n_sync) begin
+        if(~rst_n_sync) begin
             fifo_wr_en <= 1'b0;
         end else if(po_flag && cnt_byte == (FIFO_WR_BYTE-1)) begin
             fifo_wr_en <= 1'b1;
@@ -60,8 +76,8 @@ module uart_receiver
     
 
     //输出的有效写数据
-    always@(posedge clk or negedge rst_n) begin
-        if(~rst_n) begin
+    always@(posedge clk or negedge rst_n_sync) begin
+        if(~rst_n_sync) begin
             fifo_wr_data <= 'd0;
         end else if(po_flag) begin  
         //uart模块每次接收到一个新的Byte, 就将移位寄存器左移移位8bit, 并在低8位加上新的到的数据
@@ -80,7 +96,7 @@ module uart_receiver
     uart_rx_inst
     (
         .sys_clk     (clk         ),   //系统时钟50MHz
-        .sys_rst_n   (rst_n       ),   //全局复位
+        .sys_rst_n   (rst_n_sync  ),   //全局复位
         .rx          (rx          ),   //串口接收数据
     
         .po_data     (po_data     ),   //串转并后的8bit数据

@@ -12,7 +12,7 @@ module axi_ddr_ctrl
     #(parameter FIFO_WR_WIDTH = 5'd16,  //用户端FIFO读写位宽
                 FIFO_RD_WIDTH = 5'd16)
         (
-        input   wire                        clk             , //AXI读写主机时钟
+        input   wire                        clk             , //AXI读写主机时钟(ui_clk)
         input   wire                        rst_n           , 
                                 
         //用户端                   
@@ -80,6 +80,7 @@ module axi_ddr_ctrl
         input   wire                        m_axi_rvalid    , //读数据有效标志
         output  wire                        m_axi_rready      //主机发出的读数据ready
     );
+    
     
     //连线
     //AXI控制器到AXI写主机

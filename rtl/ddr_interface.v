@@ -105,6 +105,23 @@ module ddr_interface
     wire        axi_rvalid    ; //读数据有效标志
     wire        axi_rready    ; //主机发出的读数据ready
     
+    //输入系统时钟异步复位、同步释放处理
+    reg         rst_n_d1      ;
+    reg         rst_n_sync    ;
+    
+    //rst_n_d1、rst_n_sync
+    always@(posedge clk or negedge rst_n) begin
+        if(~rst_n) begin  //异步复位
+            rst_n_d1    <= 1'b0;
+            rst_n_sync  <= 1'b0;
+        end else begin   //同步释放
+            rst_n_d1    <= 1'b1;
+            rst_n_sync  <= rst_n_d1;
+        end
+    end
+    
+   
+    
     
     // axi_ddr_ctrl模块
     axi_ddr_ctrl 
@@ -206,7 +223,7 @@ module ddr_interface
         .ui_clk                 (ui_clk             ),  // output           ui_clk
         .ui_clk_sync_rst        (ui_rst             ),  // output           ui_clk_sync_rst
         .mmcm_locked            (                   ),  // output           mmcm_locked
-        .aresetn                (rst_n              ),  // input            aresetn
+        .aresetn                (rst_n_sync         ),  // input            aresetn
         .app_sr_req             (1'b0               ),  // input            app_sr_req
         .app_ref_req            (1'b0               ),  // input            app_ref_req
         .app_zq_req             (1'b0               ),  // input            app_zq_req
@@ -265,7 +282,7 @@ module ddr_interface
         .sys_clk_i              (clk                ),
         // 参考时钟
         .clk_ref_i              (clk                ),
-        .sys_rst                (rst_n              )   // input            sys_rst
+        .sys_rst                (rst_n_sync         )   // input            sys_rst
     );
     
 endmodule
