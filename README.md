@@ -1,6 +1,6 @@
 #### 关于
 
-本项目在Xilinx FPGA平台上实现了对DDR3 SDRAM读写操作，并通过RS232串口将图像数据存到SDRAM存储器，接着读取存储数据内容，并通过HDMI音视频接口实现图像显示，其中DDR3读写控制器是AXI总线接口从机。
+本项目在Xilinx FPGA平台上实现了对DDR3 SDRAM读写操作，并通过RS232串口将图像数据存到SDRAM存储器，接着读取存储数据内容，并通过HDMI音视频接口实现图像显示，其中DDR3读写控制器是AXI总线接口从机。此branch不使用FIFO IP核，用的是自行设计的异步FIFO, 有关该异步FIFO的介绍，请看另一仓库[Asymmetric_async_FIFO](https://github.com/lauchinyuan/Asymmetric_async_FIFO)，本仓库的[master branch](https://github.com/lauchinyuan/FPGA_DDR3_Ctrl)使用Vivado FIFO IP核进行实现。
 
 **若您想复现该工程，请先阅读本文最后一段，有任何问题欢迎您通过lauchinyuan@yeah.net联系我，一起探讨学习。**
 
