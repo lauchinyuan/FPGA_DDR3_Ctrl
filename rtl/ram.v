@@ -81,13 +81,13 @@ module ram
                 .wr_port_ena     (1'b1                                              ), //写端口使能, 高有效
                 .wr_en           (wr_en                                             ), //写数据使能
                 .wr_addr         (wr_addr[RAM_ADDR_WIDTH-1:WR_L2]                   ), //输入的写地址的高位, 作为每个RAM的写地址
-                .wr_data         (wr_data[(i+1)*RAM_WIDTH-1:i*RAM_WIDTH]            ), //写数据, 每个RAM都不同,相当于将原来写数据拆分"平摊"
+                .wr_data         (wr_data[(i+1)*RAM_WIDTH-1 -: RAM_WIDTH]           ), //写数据, 每个RAM都不同,相当于将原来写数据拆分"平摊"
                             
                 //读端口           
                 .rd_clk          (rd_clk                                            ), //读时钟
                 .rd_port_ena     (1'b1                                              ), //读端口使能, 高有效
                 .rd_addr         (rd_addr[RAM_ADDR_WIDTH-1:WR_L2]                   ), //输入的读地址的高位, 作为每个RAM的读地址
-                .rd_data         (ram_rd_data[(i+1)*RAM_RD_WIDTH-1:i*RAM_RD_WIDTH]  )  //读出的原始数据
+                .rd_data         (ram_rd_data[(i+1)*RAM_RD_WIDTH-1 -: RAM_RD_WIDTH] )  //读出的原始数据
             );
         
         end
@@ -131,20 +131,20 @@ module ram
                 if((WR_L2 - RD_L2) == 'd1) begin
                     //rd_addr_d[WR_L2-1:RD_L2]只有1bit两种情况
                     always@(*) begin
-                            case(rd_addr_d[WR_L2-1:RD_L2])   //在此结构中,假定写位宽最多是读位宽的16倍
-                            'd0 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1)                 : RAMS_RD_WIDTH - RD_WIDTH   ];
-                            'd1 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - RD_WIDTH      : RAMS_RD_WIDTH - 2 *RD_WIDTH]; 
-                            default: rd_data = 'd0;
-                        endcase
-                     end
-                end else if((WR_L2 - RD_L2) == 'd2) begin
-                //rd_addr_d[WR_L2-1:RD_L2]有2bit四种情况
-                    always@(*) begin
-                            case(rd_addr_d[WR_L2-1:RD_L2])   //在此结构中,假定写位宽最多是读位宽的16倍
-                            'd0 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1)                 : RAMS_RD_WIDTH - RD_WIDTH   ];
-                            'd1 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - RD_WIDTH      : RAMS_RD_WIDTH - 2 *RD_WIDTH];
-                            'd2 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 2 *RD_WIDTH   : RAMS_RD_WIDTH - 3 *RD_WIDTH];
-                            'd3 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 3 *RD_WIDTH   : RAMS_RD_WIDTH - 4 *RD_WIDTH]; 
+                            case(rd_addr_d[WR_L2-1:RD_L2])   
+                            'd0 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1)                 -: RD_WIDTH ];
+                            'd1 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - RD_WIDTH      -: RD_WIDTH ]; 
+                            default: rd_data = 'd0;                                    
+                        endcase                                                        
+                     end                                                               
+                end else if((WR_L2 - RD_L2) == 'd2) begin                              
+                //rd_addr_d[WR_L2-1:RD_L2]有2bit四种情况                                 
+                    always@(*) begin                                                      
+                            case(rd_addr_d[WR_L2-1:RD_L2])                               
+                            'd0 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1)                 -: RD_WIDTH ];
+                            'd1 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - RD_WIDTH      -: RD_WIDTH ];
+                            'd2 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 2 *RD_WIDTH   -: RD_WIDTH ];
+                            'd3 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 3 *RD_WIDTH   -: RD_WIDTH ]; 
                             default: rd_data = 'd0;
                         endcase
                      end                
@@ -152,38 +152,38 @@ module ram
                 end else if((WR_L2 - RD_L2) == 'd3) begin
                 //rd_addr_d[WR_L2-1:RD_L2]有3bit八种情况
                     always@(*) begin
-                            case(rd_addr_d[WR_L2-1:RD_L2])   //在此结构中,假定写位宽最多是读位宽的16倍
-                            'd0 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1)                 : RAMS_RD_WIDTH - RD_WIDTH   ];
-                            'd1 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - RD_WIDTH      : RAMS_RD_WIDTH - 2 *RD_WIDTH];
-                            'd2 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 2 *RD_WIDTH   : RAMS_RD_WIDTH - 3 *RD_WIDTH];
-                            'd3 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 3 *RD_WIDTH   : RAMS_RD_WIDTH - 4 *RD_WIDTH];
-                            'd4 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 4 *RD_WIDTH   : RAMS_RD_WIDTH - 5 *RD_WIDTH];
-                            'd5 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 5 *RD_WIDTH   : RAMS_RD_WIDTH - 6 *RD_WIDTH];
-                            'd6 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 6 *RD_WIDTH   : RAMS_RD_WIDTH - 7 *RD_WIDTH];
-                            'd7 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 7 *RD_WIDTH   : RAMS_RD_WIDTH - 8 *RD_WIDTH];
+                            case(rd_addr_d[WR_L2-1:RD_L2])   
+                            'd0 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1)                 -: RD_WIDTH ];
+                            'd1 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - RD_WIDTH      -: RD_WIDTH ];
+                            'd2 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 2 *RD_WIDTH   -: RD_WIDTH ];
+                            'd3 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 3 *RD_WIDTH   -: RD_WIDTH ];
+                            'd4 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 4 *RD_WIDTH   -: RD_WIDTH ];
+                            'd5 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 5 *RD_WIDTH   -: RD_WIDTH ];
+                            'd6 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 6 *RD_WIDTH   -: RD_WIDTH ];
+                            'd7 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 7 *RD_WIDTH   -: RD_WIDTH ];
                             default: rd_data = 'd0;
                         endcase
                      end                
                 end else if((WR_L2 - RD_L2) == 'd4) begin
                 //rd_addr_d[WR_L2-1:RD_L2]有4bit十六种种情况
                     always@(*) begin
-                            case(rd_addr_d[WR_L2-1:RD_L2])   //在此结构中,假定写位宽最多是读位宽的16倍
-                            'd0 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1)                 : RAMS_RD_WIDTH - RD_WIDTH   ];
-                            'd1 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - RD_WIDTH      : RAMS_RD_WIDTH - 2 *RD_WIDTH];
-                            'd2 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 2 *RD_WIDTH   : RAMS_RD_WIDTH - 3 *RD_WIDTH];
-                            'd3 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 3 *RD_WIDTH   : RAMS_RD_WIDTH - 4 *RD_WIDTH];
-                            'd4 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 4 *RD_WIDTH   : RAMS_RD_WIDTH - 5 *RD_WIDTH];
-                            'd5 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 5 *RD_WIDTH   : RAMS_RD_WIDTH - 6 *RD_WIDTH];
-                            'd6 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 6 *RD_WIDTH   : RAMS_RD_WIDTH - 7 *RD_WIDTH];
-                            'd7 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 7 *RD_WIDTH   : RAMS_RD_WIDTH - 8 *RD_WIDTH];
-                            'd8 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 8 *RD_WIDTH   : RAMS_RD_WIDTH - 9 *RD_WIDTH];
-                            'd9 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 9 *RD_WIDTH   : RAMS_RD_WIDTH - 10*RD_WIDTH];
-                            'd10: rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 10*RD_WIDTH   : RAMS_RD_WIDTH - 11*RD_WIDTH];
-                            'd11: rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 11*RD_WIDTH   : RAMS_RD_WIDTH - 12*RD_WIDTH];
-                            'd12: rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 12*RD_WIDTH   : RAMS_RD_WIDTH - 13*RD_WIDTH];
-                            'd13: rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 13*RD_WIDTH   : RAMS_RD_WIDTH - 14*RD_WIDTH];
-                            'd14: rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 14*RD_WIDTH   : RAMS_RD_WIDTH - 15*RD_WIDTH];
-                            'd15: rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 15*RD_WIDTH   : RAMS_RD_WIDTH - 16*RD_WIDTH]; 
+                            case(rd_addr_d[WR_L2-1:RD_L2])   
+                            'd0 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1)                 -: RD_WIDTH];
+                            'd1 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - RD_WIDTH      -: RD_WIDTH];
+                            'd2 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 2 *RD_WIDTH   -: RD_WIDTH];
+                            'd3 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 3 *RD_WIDTH   -: RD_WIDTH];
+                            'd4 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 4 *RD_WIDTH   -: RD_WIDTH];
+                            'd5 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 5 *RD_WIDTH   -: RD_WIDTH];
+                            'd6 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 6 *RD_WIDTH   -: RD_WIDTH];
+                            'd7 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 7 *RD_WIDTH   -: RD_WIDTH];
+                            'd8 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 8 *RD_WIDTH   -: RD_WIDTH];
+                            'd9 : rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 9 *RD_WIDTH   -: RD_WIDTH];
+                            'd10: rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 10*RD_WIDTH   -: RD_WIDTH];
+                            'd11: rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 11*RD_WIDTH   -: RD_WIDTH];
+                            'd12: rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 12*RD_WIDTH   -: RD_WIDTH];
+                            'd13: rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 13*RD_WIDTH   -: RD_WIDTH];
+                            'd14: rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 14*RD_WIDTH   -: RD_WIDTH];
+                            'd15: rd_data = ram_rd_data[(RAMS_RD_WIDTH-1) - 15*RD_WIDTH   -: RD_WIDTH]; 
                             default: rd_data = 'd0;
                         endcase
                      end                
@@ -202,8 +202,7 @@ module ram
             for(i=0;i<RAM_RD2WR;i=i+1) begin: rd_depth
                 for(j=0;j<WR_IND;j=j+1) begin: wr_width
                     always@(*) begin
-                        rd_data[(RAMS_RD_WIDTH-1) - (j*RAM_WIDTH) - (i*WR_WIDTH): (RAMS_RD_WIDTH-RAM_WIDTH) - (j*RAM_WIDTH) - (i*WR_WIDTH)]
-                        =ram_rd_data[(RAMS_RD_WIDTH-1) - (j*RAM_RD_WIDTH) - (i*RAM_WIDTH): (RAMS_RD_WIDTH-RAM_WIDTH) - (j*RAM_RD_WIDTH) - (i*RAM_WIDTH)];                   
+                        rd_data[(RAMS_RD_WIDTH-1) - (j*RAM_WIDTH) - (i*WR_WIDTH) -: RAM_WIDTH] = ram_rd_data[(RAMS_RD_WIDTH-1) - (j*RAM_RD_WIDTH) - (i*RAM_WIDTH) -: RAM_WIDTH];                   
                     end
 
                 end
