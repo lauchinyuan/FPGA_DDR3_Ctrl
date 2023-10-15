@@ -8,54 +8,60 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module axi_master_wr(
+module axi_master_wr
+#(parameter     AXI_WIDTH     = 'd64            ,  //AXI总线读写数据位宽
+                AXI_AXSIZE    = 3'b011          ,  //AXI总线的axi_axsize, 需要与AXI_WIDTH对应
+                AXI_WSTRB_W   = AXI_WIDTH>>3    )  //axi_wstrb的位宽, AXI_WIDTH/8                              
+(
         //用户端
-        input   wire        clk              ,
-        input   wire        rst_n            ,
-        input   wire        wr_start         , //开始写信号
-        input   wire [29:0] wr_addr          , //写首地址
-        input   wire [63:0] wr_data          ,
-        input   wire [7:0]  wr_len           , //突发传输长度
-        output  reg         wr_done          , //写完成标志
-        output  wire        m_axi_w_handshake, //写通道成功握手
-        output  wire        wr_ready         , //写准备信号,拉高时可以发起wr_start
+        input   wire                    clk              ,
+        input   wire                    rst_n            ,
+        input   wire                    wr_start         , //开始写信号
+        input   wire [29:0]             wr_addr          , //写首地址
+        input   wire [AXI_WIDTH-1:0]    wr_data          ,
+        input   wire [7:0]              wr_len           , //突发传输长度
+        output  reg                     wr_done          , //写完成标志
+        output  wire                    m_axi_w_handshake, //写通道成功握手
+        output  wire                    wr_ready         , //写准备信号,拉高时可以发起wr_start
         
         //AXI4写地址通道
-        output  wire [3:0]  m_axi_awid      , 
-        output  reg  [29:0] m_axi_awaddr    ,
-        output  reg  [7:0]  m_axi_awlen     , //突发传输长度
-        output  wire [2:0]  m_axi_awsize    , //突发传输大小(Byte)
-        output  wire [1:0]  m_axi_awburst   , //突发类型
-        output  wire        m_axi_awlock    , 
-        output  wire [3:0]  m_axi_awcache   , 
-        output  wire [2:0]  m_axi_awprot    ,
-        output  wire [3:0]  m_axi_awqos     ,
-        output  reg         m_axi_awvalid   , //写地址valid
-        input   wire        m_axi_awready   , //从机发出的写地址ready
+        output  wire [3:0]              m_axi_awid      , 
+        output  reg  [29:0]             m_axi_awaddr    ,
+        output  reg  [7:0]              m_axi_awlen     , //突发传输长度
+        output  wire [2:0]              m_axi_awsize    , //突发传输大小(Byte)
+        output  wire [1:0]              m_axi_awburst   , //突发类型
+        output  wire                    m_axi_awlock    , 
+        output  wire [3:0]              m_axi_awcache   , 
+        output  wire [2:0]              m_axi_awprot    ,
+        output  wire [3:0]              m_axi_awqos     ,
+        output  reg                     m_axi_awvalid   , //写地址valid
+        input   wire                    m_axi_awready   , //从机发出的写地址ready
         
         //写数据通道
-        output  wire [63:0] m_axi_wdata     , //写数据
-        output  wire [7:0]  m_axi_wstrb     , //写数据有效字节线
-        output  reg         m_axi_wlast     , //最后一个数据标志
-        output  reg         m_axi_wvalid    , //写数据有效标志
-        input   wire        m_axi_wready    , //从机发出的写数据ready
+        output  wire [AXI_WIDTH-1:0]    m_axi_wdata     , //写数据
+        output  wire [AXI_WSTRB_W-1:0]  m_axi_wstrb     , //写数据有效字节线
+        output  reg                     m_axi_wlast     , //最后一个数据标志
+        output  reg                     m_axi_wvalid    , //写数据有效标志
+        input   wire                    m_axi_wready    , //从机发出的写数据ready
         
         //写响应通道
-        input   wire [3:0]  m_axi_bid       ,
-        input   wire [1:0]  m_axi_bresp     , //响应信号,表征写传输是否成功
-        input   wire        m_axi_bvalid    , //响应信号valid标志
-        output  reg         m_axi_bready      //主机响应ready信号
+        input   wire [3:0]              m_axi_bid       ,
+        input   wire [1:0]              m_axi_bresp     , //响应信号,表征写传输是否成功
+        input   wire                    m_axi_bvalid    , //响应信号valid标志
+        output  reg                     m_axi_bready      //主机响应ready信号
     );
     
     //写数据相关参数定义
-    parameter   M_AXI_AWID      =  4'd0     ,
-                M_AXI_AWSIZE    =  3'b011   , //8Byte
-                M_AXI_AWBURST   =  2'b10   , //突发类型, INCR
-                M_AXI_AWLOCK    =  1'b0     , //不锁定
-                M_AXI_AWCACHE   =  4'b0010  , //存储器类型, 选择Normal Non-cacheable Non-bufferable
-                M_AXI_AWPROT    =  3'b0     ,
-                M_AXI_AWQOS     =  4'b0     ,
-                M_AXI_WSTRB     =  8'hff    ;
+    parameter   M_AXI_AWID      =  4'd0         ,
+                M_AXI_AWSIZE    =  AXI_AXSIZE   , 
+                M_AXI_AWBURST   =  2'b10        , //突发类型, INCR
+                M_AXI_AWLOCK    =  1'b0         , //不锁定
+                M_AXI_AWCACHE   =  4'b0010      , //存储器类型, 选择Normal Non-cacheable Non-bufferable
+                M_AXI_AWPROT    =  3'b0         ,
+                M_AXI_AWQOS     =  4'b0         ,
+                M_AXI_WSTRB     =  'hff         ;
+                
+ 
                 
                 
     

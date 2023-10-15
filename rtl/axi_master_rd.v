@@ -8,47 +8,50 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module axi_master_rd(
+module axi_master_rd
+#(parameter     AXI_WIDTH     = 'd64    ,  //AXI总线读写数据位宽
+                AXI_AXSIZE    = 3'b011   )  //AXI总线的axi_axsize, 需要与AXI_WIDTH对应
+(
         //用户端
-        input   wire        clk              ,
-        input   wire        rst_n            ,
-        input   wire        rd_start         , //开始读信号
-        input   wire [29:0] rd_addr          , //读首地址
-        output  wire [63:0] rd_data          , //读出的数据
-        input   wire [7:0]  rd_len           , //突发传输长度
-        output  reg         rd_done          , //读完成标志
-        output  wire        rd_ready         , //准备好读标志
-        output  wire        m_axi_r_handshake, //读通道成功握手
+        input   wire                    clk              ,
+        input   wire                    rst_n            ,
+        input   wire                    rd_start         , //开始读信号
+        input   wire [29:0]             rd_addr          , //读首地址
+        output  wire [AXI_WIDTH-1:0]    rd_data          , //读出的数据
+        input   wire [7:0]              rd_len           , //突发传输长度
+        output  reg                     rd_done          , //读完成标志
+        output  wire                    rd_ready         , //准备好读标志
+        output  wire                    m_axi_r_handshake, //读通道成功握手
         
         //AXI4读地址通道
-        output  wire [3:0]  m_axi_arid      , 
-        output  reg  [29:0] m_axi_araddr    ,
-        output  reg  [7:0]  m_axi_arlen     , //突发传输长度
-        output  wire [2:0]  m_axi_arsize    , //突发传输大小(Byte)
-        output  wire [1:0]  m_axi_arburst   , //突发类型
-        output  wire        m_axi_arlock    , 
-        output  wire [3:0]  m_axi_arcache   , 
-        output  wire [2:0]  m_axi_arprot    ,
-        output  wire [3:0]  m_axi_arqos     ,
-        output  reg         m_axi_arvalid   , //读地址valid
-        input   wire        m_axi_arready   , //从机准备接收读地址
+        output  wire [3:0]              m_axi_arid      , 
+        output  reg  [29:0]             m_axi_araddr    ,
+        output  reg  [7:0]              m_axi_arlen     , //突发传输长度
+        output  wire [2:0]              m_axi_arsize    , //突发传输大小(Byte)
+        output  wire [1:0]              m_axi_arburst   , //突发类型
+        output  wire                    m_axi_arlock    , 
+        output  wire [3:0]              m_axi_arcache   , 
+        output  wire [2:0]              m_axi_arprot    ,
+        output  wire [3:0]              m_axi_arqos     ,
+        output  reg                     m_axi_arvalid   , //读地址valid
+        input   wire                    m_axi_arready   , //从机准备接收读地址
         
         //读数据通道
-        input   wire [63:0] m_axi_rdata     , //读数据
-        input   wire [1:0]  m_axi_rresp     , //收到的读响应
-        input   wire        m_axi_rlast     , //最后一个数据标志
-        input   wire        m_axi_rvalid    , //读数据有效标志
-        output  reg         m_axi_rready      //主机发出的读数据ready
+        input   wire [63:0]             m_axi_rdata     , //读数据
+        input   wire [1:0]              m_axi_rresp     , //收到的读响应
+        input   wire                    m_axi_rlast     , //最后一个数据标志
+        input   wire                    m_axi_rvalid    , //读数据有效标志
+        output  reg                     m_axi_rready      //主机发出的读数据ready
     );
     
     //读数据相关参数定义
-    parameter   M_AXI_ARID      =  4'd0     ,
-                M_AXI_ARSIZE    =  3'b011   , //8Byte
-                M_AXI_ARBURST   =  2'b10    , //突发类型, INCR
-                M_AXI_ARLOCK    =  1'b0     , //不锁定
-                M_AXI_ARCACHE   =  4'b0010  , //存储器类型, 选择Normal Non-cacheable Non-bufferable
-                M_AXI_ARPROT    =  3'b0     ,
-                M_AXI_ARQOS     =  4'b0     ;   
+    parameter   M_AXI_ARID      =  4'd0         ,
+                M_AXI_ARSIZE    =  AXI_AXSIZE   , 
+                M_AXI_ARBURST   =  2'b10        , //突发类型, INCR
+                M_AXI_ARLOCK    =  1'b0         , //不锁定
+                M_AXI_ARCACHE   =  4'b0010      , //存储器类型, 选择Normal Non-cacheable Non-bufferable
+                M_AXI_ARPROT    =  3'b0         ,
+                M_AXI_ARQOS     =  4'b0         ;   
     
     //状态机状态定义
     parameter   IDLE    =   3'b000,  //空闲状态

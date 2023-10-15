@@ -9,8 +9,11 @@
 
 
 module axi_ddr_ctrl
-    #(parameter FIFO_WR_WIDTH = 5'd16,  //用户端FIFO读写位宽
-                FIFO_RD_WIDTH = 5'd16)
+    #(parameter FIFO_WR_WIDTH = 'd32            ,  //用户端FIFO读写位宽
+                FIFO_RD_WIDTH = 'd32            ,
+                AXI_WIDTH     = 'd64            ,  //AXI总线读写数据位宽
+                AXI_AXSIZE    = 3'b011          ,  //AXI总线的axi_axsize, 需要与AXI_WIDTH对应
+                AXI_WSTRB_W   = AXI_WIDTH>>3    )   //axi_wstrb的位宽, AXI_WIDTH/8
         (
         input   wire                        clk             , //AXI读写主机时钟(ui_clk)
         input   wire                        rst_n           , 
@@ -48,8 +51,8 @@ module axi_ddr_ctrl
         input   wire                        m_axi_awready   , //从机发出的写地址ready
                         
         //写数据通道             
-        output  wire [63:0]                 m_axi_wdata     , //写数据
-        output  wire [7:0]                  m_axi_wstrb     , //写数据有效字节线
+        output  wire [AXI_WIDTH-1:0]        m_axi_wdata     , //写数据
+        output  wire [AXI_WSTRB_W-1:0]      m_axi_wstrb     , //写数据有效字节线
         output  wire                        m_axi_wlast     , //最后一个数据标志
         output  wire                        m_axi_wvalid    , //写数据有效标志
         input   wire                        m_axi_wready    , //从机发出的写数据ready
@@ -74,7 +77,7 @@ module axi_ddr_ctrl
         input   wire                        m_axi_arready   , //从机准备接收读地址
                         
         //读数据通道             
-        input   wire [63:0]                 m_axi_rdata     , //读数据
+        input   wire [AXI_WIDTH-1:0]        m_axi_rdata     , //读数据
         input   wire [1:0]                  m_axi_rresp     , //收到的读响应
         input   wire                        m_axi_rlast     , //最后一个数据标志
         input   wire                        m_axi_rvalid    , //读数据有效标志
@@ -84,27 +87,29 @@ module axi_ddr_ctrl
     
     //连线
     //AXI控制器到AXI写主机
-    wire        axi_writing     ;
-    wire        axi_wr_ready    ;
-    wire        axi_wr_start    ;
-    wire [63:0] axi_wr_data     ;
-    wire [29:0] axi_wr_addr     ;
-    wire [7:0]  axi_wr_len      ;
-    wire        axi_wr_done     ;
+    wire                    axi_writing     ;
+    wire                    axi_wr_ready    ;
+    wire                    axi_wr_start    ;
+    wire [AXI_WIDTH-1:0]    axi_wr_data     ;
+    wire [29:0]             axi_wr_addr     ;
+    wire [7:0]              axi_wr_len      ;
+    wire                    axi_wr_done     ;
     
     //读AXI主机
-    wire        axi_reading     ;
-    wire        axi_rd_ready    ;
-    wire        axi_rd_start    ;
-    wire [63:0] axi_rd_data     ;
-    wire [29:0] axi_rd_addr     ;
-    wire [7:0]  axi_rd_len      ;
-    wire        axi_rd_done     ;
+    wire                    axi_reading     ;
+    wire                    axi_rd_ready    ;
+    wire                    axi_rd_start    ;
+    wire [AXI_WIDTH-1:0]    axi_rd_data     ;
+    wire [29:0]             axi_rd_addr     ;
+    wire [7:0]              axi_rd_len      ;
+    wire                    axi_rd_done     ;
     
     //AXI控制器
     axi_ctrl 
     #(.FIFO_WR_WIDTH(FIFO_WR_WIDTH),  //用户端FIFO读写位宽
-      .FIFO_RD_WIDTH(FIFO_RD_WIDTH))
+      .FIFO_RD_WIDTH(FIFO_RD_WIDTH),
+      .AXI_WIDTH    (AXI_WIDTH    )
+      )
       axi_ctrl_inst
     (
         .clk             (clk             ), //AXI读写主机时钟
@@ -150,7 +155,11 @@ module axi_ddr_ctrl
     
     
     //AXI读主机
-    axi_master_rd axi_master_rd_inst(
+    axi_master_rd 
+    #(  .AXI_WIDTH     (AXI_WIDTH     ),  //AXI总线读写数据位宽
+        .AXI_AXSIZE    (AXI_AXSIZE    ))   //AXI总线的axi_axsize, 需要与AXI_WIDTH对应    
+        axi_master_rd_inst
+    (
         //用户端
         .clk              (clk              ),
         .rst_n            (rst_n            ),
@@ -184,7 +193,11 @@ module axi_ddr_ctrl
     );
     
     //AXI写主机
-    axi_master_wr axi_master_wr_inst(
+    axi_master_wr 
+    #(.AXI_WIDTH     (AXI_WIDTH     ),  //AXI总线读写数据位宽
+      .AXI_AXSIZE    (AXI_AXSIZE    ),  //AXI总线的axi_axsize, 需要与AXI_WIDTH对应
+      .AXI_WSTRB_W   (AXI_WSTRB_W   ))   //axi_wstrb的位宽, AXI_WIDTH/8
+    axi_master_wr_inst(
         //用户端
         .clk              (clk              ),
         .rst_n            (rst_n            ),
