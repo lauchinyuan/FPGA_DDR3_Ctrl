@@ -11,8 +11,31 @@
 
 
 module ddr_interface
-    #(parameter FIFO_WR_WIDTH = 5'd16,  //用户端FIFO读写位宽
-                FIFO_RD_WIDTH = 5'd16)
+    #(parameter FIFO_WR_WIDTH           = 'd32           ,  //用户端FIFO读写位宽
+                FIFO_RD_WIDTH           = 'd32           ,
+                AXI_WIDTH               = 'd64           ,  //AXI总线读写数据位宽
+                AXI_AXSIZE              = 3'b011         ,  //AXI总线的axi_awsize, 需要与AXI_WIDTH对应
+
+                //写FIFO相关参数
+                WR_FIFO_RAM_DEPTH       = 'd2048         , //写FIFO内部RAM存储器深度
+                WR_FIFO_RAM_ADDR_WIDTH  = 'd11           , //写FIFO内部RAM读写地址宽度, log2(WR_FIFO_RAM_DEPTH)
+                WR_FIFO_WR_IND          = 'd1            , //写FIFO单次写操作访问的ram_mem单元个数 FIFO_WR_WIDTH/WR_FIFO_RAM_WIDTH
+                WR_FIFO_RD_IND          = 'd2            , //写FIFO单次读操作访问的ram_mem单元个数 AXI_WIDTH/WR_FIFO_RAM_ADDR_WIDTH        
+                WR_FIFO_RAM_WIDTH       = FIFO_WR_WIDTH  , //写FIFO RAM存储器的位宽
+                WR_FIFO_WR_L2           = 'd0            , //log2(WR_FIFO_WR_IND)
+                WR_FIFO_RD_L2           = 'd1            , //log2(WR_FIFO_RD_IND)
+                WR_FIFO_RAM_RD2WR       = 'd2            , //读数据位宽和写数据位宽的比, 即一次读取的RAM单元深度, RAM_RD2WR = RD_WIDTH/WR_WIDTH, 当读位宽小于等于写位宽时, 值为1   
+
+                //读FIFO相关参数
+                RD_FIFO_RAM_DEPTH       = 'd2048         , //读FIFO内部RAM存储器深度
+                RD_FIFO_RAM_ADDR_WIDTH  = 'd11           , //读FIFO内部RAM读写地址宽度, log2(RD_FIFO_RAM_DEPTH)
+                RD_FIFO_WR_IND          = 'd2            , //读FIFO单次写操作访问的ram_mem单元个数 AXI_WIDTH/RD_FIFO_RAM_WIDTH
+                RD_FIFO_RD_IND          = 'd1            , //读FIFO单次读操作访问的ram_mem单元个数 FIFO_RD_WIDTH/RD_FIFO_RAM_ADDR_WIDTH        
+                RD_FIFO_RAM_WIDTH       = FIFO_RD_WIDTH  , //读FIFO RAM存储器的位宽
+                RD_FIFO_WR_L2           = 'd1            , //log2(RD_FIFO_WR_IND)
+                RD_FIFO_RD_L2           = 'd0            , //log2(RD_FIFO_RD_IND)
+                RD_FIFO_RAM_RD2WR       = 'd1              //读数据位宽和写数据位宽的比, 即一次读取的RAM单元深度, RAM_RD2WR = RD_WIDTH/WR_WIDTH, 当读位宽小于等于写位宽时, 值为1 
+                )
         (
         input   wire                        clk                 , //DDR3时钟, 也就是DDR3 MIG IP核参考时钟
         input   wire                        rst_n               , 
@@ -57,57 +80,59 @@ module ddr_interface
         
     );
     
+    localparam  AXI_WSTRB_W = AXI_WIDTH >> 3    ;  //axi_wstrb的位宽, AXI_WIDTH/8
+    
     
     //AXI连线
     //AXI4写地址通道
-    wire [3:0]  axi_awid      ; 
-    wire [29:0] axi_awaddr    ;
-    wire [7:0]  axi_awlen     ; //突发传输长度
-    wire [2:0]  axi_awsize    ; //突发传输大小(Byte)
-    wire [1:0]  axi_awburst   ; //突发类型
-    wire        axi_awlock    ; 
-    wire [3:0]  axi_awcache   ; 
-    wire [2:0]  axi_awprot    ;
-    wire [3:0]  axi_awqos     ;
-    wire        axi_awvalid   ; //写地址valid
-    wire        axi_awready   ; //从机发出的写地址ready
+    wire [3:0]              axi_awid      ; 
+    wire [29:0]             axi_awaddr    ;
+    wire [7:0]              axi_awlen     ; //突发传输长度
+    wire [2:0]              axi_awsize    ; //突发传输大小(Byte)
+    wire [1:0]              axi_awburst   ; //突发类型
+    wire                    axi_awlock    ; 
+    wire [3:0]              axi_awcache   ; 
+    wire [2:0]              axi_awprot    ;
+    wire [3:0]              axi_awqos     ;
+    wire                    axi_awvalid   ; //写地址valid
+    wire                    axi_awready   ; //从机发出的写地址ready
     
     //写数据通道
-    wire [63:0] axi_wdata     ; //写数据
-    wire [7:0]  axi_wstrb     ; //写数据有效字节线
-    wire        axi_wlast     ; //最后一个数据标志
-    wire        axi_wvalid    ; //写数据有效标志
-    wire        axi_wready    ; //从机发出的写数据ready
-    
-    //写响应通道
-    wire [3:0]  axi_bid       ;
-    wire [1:0]  axi_bresp     ; //响应信号,表征写传输是否成功
-    wire        axi_bvalid    ; //响应信号valid标志
-    wire        axi_bready    ; //主机响应ready信号
+    wire [AXI_WIDTH-1:0]    axi_wdata     ; //写数据
+    wire [AXI_WSTRB_W-1:0]  axi_wstrb     ; //写数据有效字节线
+    wire                    axi_wlast     ; //最后一个数据标志
+    wire                    axi_wvalid    ; //写数据有效标志
+    wire                    axi_wready    ; //从机发出的写数据ready
+                
+    //写响应通道         
+    wire [3:0]              axi_bid       ;
+    wire [1:0]              axi_bresp     ; //响应信号,表征写传输是否成功
+    wire                    axi_bvalid    ; //响应信号valid标志
+    wire                    axi_bready    ; //主机响应ready信号
     
     //读地址通道
-    wire [3:0]  axi_arid      ; 
-    wire [29:0] axi_araddr    ; 
-    wire [7:0]  axi_arlen     ; //突发传输长度
-    wire [2:0]  axi_arsize    ; //突发传输大小(Byte)
-    wire [1:0]  axi_arburst   ; //突发类型
-    wire        axi_arlock    ; 
-    wire [3:0]  axi_arcache   ; 
-    wire [2:0]  axi_arprot    ;
-    wire [3:0]  axi_arqos     ;
-    wire        axi_arvalid   ; //读地址valid
-    wire        axi_arready   ; //从机准备接收读地址
+    wire [3:0]              axi_arid      ; 
+    wire [29:0]             axi_araddr    ; 
+    wire [7:0]              axi_arlen     ; //突发传输长度
+    wire [2:0]              axi_arsize    ; //突发传输大小(Byte)
+    wire [1:0]              axi_arburst   ; //突发类型
+    wire                    axi_arlock    ; 
+    wire [3:0]              axi_arcache   ; 
+    wire [2:0]              axi_arprot    ;
+    wire [3:0]              axi_arqos     ;
+    wire                    axi_arvalid   ; //读地址valid
+    wire                    axi_arready   ; //从机准备接收读地址
     
     //读数据通道
-    wire [63:0] axi_rdata     ; //读数据
-    wire [1:0]  axi_rresp     ; //收到的读响应
-    wire        axi_rlast     ; //最后一个数据标志
-    wire        axi_rvalid    ; //读数据有效标志
-    wire        axi_rready    ; //主机发出的读数据ready
+    wire [AXI_WIDTH-1:0]    axi_rdata     ; //读数据
+    wire [1:0]              axi_rresp     ; //收到的读响应
+    wire                    axi_rlast     ; //最后一个数据标志
+    wire                    axi_rvalid    ; //读数据有效标志
+    wire                    axi_rready    ; //主机发出的读数据ready
     
     //输入系统时钟异步复位、同步释放处理
-    reg         rst_n_d1      ;
-    reg         rst_n_sync    ;
+    reg                     rst_n_d1      ;
+    reg                     rst_n_sync    ;
     
     //rst_n_d1、rst_n_sync
     always@(posedge clk or negedge rst_n) begin
@@ -125,8 +150,32 @@ module ddr_interface
     
     // axi_ddr_ctrl模块
     axi_ddr_ctrl 
-        #(.FIFO_WR_WIDTH(FIFO_WR_WIDTH),  //用户端FIFO读写位宽
-          .FIFO_RD_WIDTH(FIFO_RD_WIDTH))
+        #(.FIFO_WR_WIDTH           (FIFO_WR_WIDTH           ),  
+          .FIFO_RD_WIDTH           (FIFO_RD_WIDTH           ),
+          .AXI_WIDTH               (AXI_WIDTH               ),
+          .AXI_AXSIZE              (AXI_AXSIZE              ),
+          .AXI_WSTRB_W             (AXI_WSTRB_W             ),
+           //写FIFO相关参数
+          .WR_FIFO_RAM_DEPTH       (WR_FIFO_RAM_DEPTH       ), //写FIFO内部RAM存储器深度
+          .WR_FIFO_RAM_ADDR_WIDTH  (WR_FIFO_RAM_ADDR_WIDTH  ), //写FIFO内部RAM读写地址宽度, log2(WR_FIFO_RAM_DEPTH)
+          .WR_FIFO_WR_IND          (WR_FIFO_WR_IND          ), //写FIFO单次写操作访问的ram_mem单元个数 FIFO_WR_WIDTH/WR_FIFO_RAM_WIDTH
+          .WR_FIFO_RD_IND          (WR_FIFO_RD_IND          ), //写FIFO单次读操作访问的ram_mem单元个数 AXI_WIDTH/WR_FIFO_RAM_ADDR_WIDTH        
+          .WR_FIFO_RAM_WIDTH       (WR_FIFO_RAM_WIDTH       ), //写FIFO RAM存储器的位宽
+          .WR_FIFO_WR_L2           (WR_FIFO_WR_L2           ), //log2(WR_FIFO_WR_IND)
+          .WR_FIFO_RD_L2           (WR_FIFO_RD_L2           ), //log2(WR_FIFO_RD_IND)
+          .WR_FIFO_RAM_RD2WR       (WR_FIFO_RAM_RD2WR       ), //读数据位宽和写数据位宽的比, 即一次读取的RAM单元深度, RAM_RD2WR = RD_WIDTH/WR_WIDTH, 当读位宽小于等于写位宽时, 值为1   
+                                   
+           //读FIFO相关参数        
+          .RD_FIFO_RAM_DEPTH       (RD_FIFO_RAM_DEPTH       ), //读FIFO内部RAM存储器深度
+          .RD_FIFO_RAM_ADDR_WIDTH  (RD_FIFO_RAM_ADDR_WIDTH  ), //读FIFO内部RAM读写地址宽度, log2(RD_FIFO_RAM_DEPTH)
+          .RD_FIFO_WR_IND          (RD_FIFO_WR_IND          ), //读FIFO单次写操作访问的ram_mem单元个数 AXI_WIDTH/RD_FIFO_RAM_WIDTH
+          .RD_FIFO_RD_IND          (RD_FIFO_RD_IND          ), //读FIFO单次读操作访问的ram_mem单元个数 FIFO_RD_WIDTH/RD_FIFO_RAM_ADDR_WIDTH        
+          .RD_FIFO_RAM_WIDTH       (RD_FIFO_RAM_WIDTH       ), //读FIFO RAM存储器的位宽
+          .RD_FIFO_WR_L2           (RD_FIFO_WR_L2           ), //log2(RD_FIFO_WR_IND)
+          .RD_FIFO_RD_L2           (RD_FIFO_RD_L2           ), //log2(RD_FIFO_RD_IND)
+          .RD_FIFO_RAM_RD2WR       (RD_FIFO_RAM_RD2WR       )  //读数据位宽和写数据位宽的比, 即一次读取的RAM单元深度, RAM_RD2WR = RD_WIDTH/WR_WIDTH, 当读位宽小于等于写位宽时, 值为1           
+          
+          )
           axi_ddr_ctrl_inst
          (
         .clk             (ui_clk           ), //AXI读写主机时钟
@@ -245,38 +294,38 @@ module ddr_interface
         .s_axi_awready          (axi_awready        ),  // output           s_axi_awready
     
         // AXI写数据通道
-        .s_axi_wdata            (axi_wdata          ),  // input [63:0]     s_axi_wdata
-        .s_axi_wstrb            (axi_wstrb          ),  // input [7:0]      s_axi_wstrb
-        .s_axi_wlast            (axi_wlast          ),  // input            s_axi_wlast
-        .s_axi_wvalid           (axi_wvalid         ),  // input            s_axi_wvalid
-        .s_axi_wready           (axi_wready         ),  // output           s_axi_wready
-        
-        // AXI写响应通道
-        .s_axi_bid              (axi_bid            ),  // output [3:0]     s_axi_bid
-        .s_axi_bresp            (axi_bresp          ),  // output [1:0]     s_axi_bresp
-        .s_axi_bvalid           (axi_bvalid         ),  // output           s_axi_bvalid
-        .s_axi_bready           (axi_bready         ),  // input            s_axi_bready
-        
-        // AXI读地址通道
-        .s_axi_arid             (axi_arid           ),  // input [3:0]      s_axi_arid
-        .s_axi_araddr           (axi_araddr         ),  // input [29:0]     s_axi_araddr
-        .s_axi_arlen            (axi_arlen          ),  // input [7:0]      s_axi_arlen
-        .s_axi_arsize           (axi_arsize         ),  // input [2:0]      s_axi_arsize
-        .s_axi_arburst          (axi_arburst        ),  // input [1:0]      s_axi_arburst
-        .s_axi_arlock           (axi_arlock         ),  // input [0:0]      s_axi_arlock
-        .s_axi_arcache          (axi_arcache        ),  // input [3:0]      s_axi_arcache
-        .s_axi_arprot           (axi_arprot         ),  // input [2:0]      s_axi_arprot
-        .s_axi_arqos            (axi_arqos          ),  // input [3:0]      s_axi_arqos
-        .s_axi_arvalid          (axi_arvalid        ),  // input            s_axi_arvalid
-        .s_axi_arready          (axi_arready        ),  // output           s_axi_arready
+        .s_axi_wdata            (axi_wdata          ),  // input [AXI_WIDTH-1:0]     s_axi_wdata
+        .s_axi_wstrb            (axi_wstrb          ),  // input [AXI_WSTRB_W-1:0]   s_axi_wstrb
+        .s_axi_wlast            (axi_wlast          ),  // input                     s_axi_wlast
+        .s_axi_wvalid           (axi_wvalid         ),  // input                     s_axi_wvalid
+        .s_axi_wready           (axi_wready         ),  // output                    s_axi_wready
+                   
+        // AXI写响应通道        
+        .s_axi_bid              (axi_bid            ),  // output [3:0]              s_axi_bid
+        .s_axi_bresp            (axi_bresp          ),  // output [1:0]              s_axi_bresp
+        .s_axi_bvalid           (axi_bvalid         ),  // output                    s_axi_bvalid
+        .s_axi_bready           (axi_bready         ),  // input                     s_axi_bready
+                   
+        // AXI读地址通道        
+        .s_axi_arid             (axi_arid           ),  // input [3:0]               s_axi_arid
+        .s_axi_araddr           (axi_araddr         ),  // input [29:0]              s_axi_araddr
+        .s_axi_arlen            (axi_arlen          ),  // input [7:0]               s_axi_arlen
+        .s_axi_arsize           (axi_arsize         ),  // input [2:0]               s_axi_arsize
+        .s_axi_arburst          (axi_arburst        ),  // input [1:0]               s_axi_arburst
+        .s_axi_arlock           (axi_arlock         ),  // input [0:0]               s_axi_arlock
+        .s_axi_arcache          (axi_arcache        ),  // input [3:0]               s_axi_arcache
+        .s_axi_arprot           (axi_arprot         ),  // input [2:0]               s_axi_arprot
+        .s_axi_arqos            (axi_arqos          ),  // input [3:0]               s_axi_arqos
+        .s_axi_arvalid          (axi_arvalid        ),  // input                     s_axi_arvalid
+        .s_axi_arready          (axi_arready        ),  // output                    s_axi_arready
         
         // AXI读数据通道
-        .s_axi_rid              (axi_rid            ),  // output [3:0]     s_axi_rid
-        .s_axi_rdata            (axi_rdata          ),  // output [63:0]    s_axi_rdata
-        .s_axi_rresp            (axi_rresp          ),  // output [1:0]     s_axi_rresp
-        .s_axi_rlast            (axi_rlast          ),  // output           s_axi_rlast
-        .s_axi_rvalid           (axi_rvalid         ),  // output           s_axi_rvalid
-        .s_axi_rready           (axi_rready         ),  // input            s_axi_rready
+        .s_axi_rid              (axi_rid            ),  // output [3:0]              s_axi_rid
+        .s_axi_rdata            (axi_rdata          ),  // output [AXI_WIDTH-1:0]    s_axi_rdata
+        .s_axi_rresp            (axi_rresp          ),  // output [1:0]              s_axi_rresp
+        .s_axi_rlast            (axi_rlast          ),  // output                    s_axi_rlast
+        .s_axi_rvalid           (axi_rvalid         ),  // output                    s_axi_rvalid
+        .s_axi_rready           (axi_rready         ),  // input                     s_axi_rready
         
         // AXI从机系统时钟
         .sys_clk_i              (clk                ),
@@ -284,5 +333,9 @@ module ddr_interface
         .clk_ref_i              (clk                ),
         .sys_rst                (rst_n_sync         )   // input            sys_rst
     );
+    
+    
+    
+    
     
 endmodule
