@@ -81,8 +81,8 @@ module axi_ctrl
                 WR_FIFO_RD_CNT_WIDTH = WR_FIFO_RAM_ADDR_WIDTH + 'd1 - WR_FIFO_RD_L2 ; //写FIFO读端口计数器的位宽
     
     //FIFO数据数量计数器   
-    wire [10:0]  cnt_rd_fifo_wrport      ;  //读FIFO写端口(对接AXI读主机)数据数量
-    wire [10:0]  cnt_wr_fifo_rdport      ;  //写FIFO读端口(对接AXI写主机)数据数量    
+    wire [RD_FIFO_WR_CNT_WIDTH-1:0]  cnt_rd_fifo_wrport      ;  //读FIFO写端口(对接AXI读主机)数据数量
+    wire [WR_FIFO_RD_CNT_WIDTH-1:0]  cnt_wr_fifo_rdport      ;  //写FIFO读端口(对接AXI写主机)数据数量    
     
     wire        rd_fifo_empty           ;  //读FIFO空标志
     wire        rd_fifo_wr_rst_busy     ;  //读FIFO正在初始化,此时先不向SDRAM发出读取请求, 否则将有数据丢失
