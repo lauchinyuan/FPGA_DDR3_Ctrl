@@ -37,7 +37,7 @@ module axi_master_rd
         input   wire                    m_axi_arready   , //从机准备接收读地址
         
         //读数据通道
-        input   wire [63:0]             m_axi_rdata     , //读数据
+        input   wire [AXI_WIDTH-1:0]    m_axi_rdata     , //读数据
         input   wire [1:0]              m_axi_rresp     , //收到的读响应
         input   wire                    m_axi_rlast     , //最后一个数据标志
         input   wire                    m_axi_rvalid    , //读数据有效标志
@@ -201,7 +201,7 @@ module axi_master_rd
     
     //rd_data 
     //读通道握手成功时,为有效数据输出
-    assign rd_data = (m_axi_r_handshake)?m_axi_rdata:64'b0;
+    assign rd_data = (m_axi_r_handshake)?m_axi_rdata:'d0;
     
 
 endmodule
