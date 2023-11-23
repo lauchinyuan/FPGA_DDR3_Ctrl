@@ -14,6 +14,10 @@ FPGA上板实验的效果如图1-2所示，硬件实验平台使用的是博宸�
 
 <center>图2. 演示2</center>
 
+#### 更新说明
+
+2023/11/23： 更改了MATLAB脚本生成文件的逻辑，将图像/视频像素数据直接以二进制的形式写入txt文本，这一文本文件可以直接通过串口调试助手发送，更实用。
+
 #### 仓库内容简介
 
 本仓库提供了所有模块的[Verilog 代码](./rtl)，其中比较关键的模块是[AXI写主机](./rtl/axi_master_wr.v)、[AXI读主机](./rtl/axi_master_rd.v)、[AXI控制器](./rtl/axi_ctrl.v)，这三个模块加上AXI总线 DDR3 MIG IP核，构成了[DDR3读写接口](./rtl/ddr_interface.v)。

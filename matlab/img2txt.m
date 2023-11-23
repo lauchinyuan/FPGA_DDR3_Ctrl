@@ -30,15 +30,15 @@ end
 imgrgb = uint8(imgrgb);
 rgb32b = uint32(rgb32b); % 转换为整数
 
-% 三通道像素保存为txt文件
-txt_path = "../txt/"+file_name+".txt"; % 文件路径
-fid = fopen(txt_path, "w");
-fprintf(fid,"%02x",imgrgb);  % 输出至文件
-fclose(fid);
+% % 三通道像素保存为txt文件
+% txt_path = "../txt/"+file_name+".txt"; % 文件路径
+% fid = fopen(txt_path, "w");
+% fprintf(fid,"%02x",imgrgb);  % 输出至文件
+% fclose(fid);
 
-% 32bit像素保存为txt文件
+% 32bit像素保存为txt文件,以二进制格式写入
 txt_path = "../txt/"+file_name+"_uint32.txt"; % 文件路径
 fid = fopen(txt_path, "w");
-fprintf(fid,"%08x",rgb32b);  % 输出至文件
+fwrite(fid,rgb32b, "uint32","ieee-be");  % 输出至文件, 大端模式写入, 这样文件由高到低二进制顺序恰好为RGB0
 fclose(fid);
 
