@@ -11,6 +11,7 @@ obj_v = VideoReader(file_name+".mp4"); % 读取视频, 得到视频对象
 frame = read(obj_v, [1 num_frame]); % 读取帧
 
 imgrgb32 = zeros(num_frame*frame_h*frame_w, 1); %开辟空间
+imgrgb32 = uint32(imgrgb32);
 % 遍历帧像素数据并写入变量
 
 % 同一个像素点的RGB数据放置在连续索引上
@@ -19,9 +20,12 @@ for f = 1:num_frame %帧遍历
         for w = 1: frame_w % 行内像素点遍历 
             % 将RGB数据组合成32bit数据, 方便存入硬件FIFO中
             % R(8bit)+G(8bit)+B(8bit)+0(8bit)
-            r = frame((f-1)*frame_h*frame_w*3+(h-1)*frame_w*3+(w-1)*3+1);% R数据
-            g = frame((f-1)*frame_h*frame_w*3+(h-1)*frame_w*3+(w-1)*3+2);% G数据
-            b = frame((f-1)*frame_h*frame_w*3+(h-1)*frame_w*3+(w-1)*3+3);% B数据
+            r = double(frame(h, w, 1, f));  % R数据
+            g = double(frame(h, w, 2, f));  % G数据
+            b = double(frame(h, w, 3, f));  % B数据
+%             r = double(frame((f-1)*frame_h*frame_w*3+(h-1)*frame_w*3+(w-1)*3+1));% R数据
+%             g = double(frame((f-1)*frame_h*frame_w*3+(h-1)*frame_w*3+(w-1)*3+2));% G数据
+%             b = double(frame((f-1)*frame_h*frame_w*3+(h-1)*frame_w*3+(w-1)*3+3));% B数据
             %合成32bit数据并存到imgrgb变量中
             imgrgb32((f-1)*frame_h*frame_w+(h-1)*frame_w+w) = uint32(bitshift(r, 24) + bitshift(g, 16) + bitshift(b, 8));
         end
