@@ -8,9 +8,29 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 module axi_ctrl
-    #(parameter FIFO_WR_WIDTH = 'd32,   //用户端FIFO读写位宽
-                FIFO_RD_WIDTH = 'd32,
-                AXI_WIDTH     = 'd64
+    #(parameter FIFO_WR_WIDTH           = 'd32           , //用户端FIFO读写位宽
+                FIFO_RD_WIDTH           = 'd32           ,
+                AXI_WIDTH               = 'd64           , //AXI数据位宽
+                
+                //写FIFO相关参数
+                WR_FIFO_RAM_DEPTH       = 'd2048         , //写FIFO内部RAM存储器深度
+                WR_FIFO_RAM_ADDR_WIDTH  = 'd11           , //写FIFO内部RAM读写地址宽度, log2(WR_FIFO_RAM_DEPTH)
+                WR_FIFO_WR_IND          = 'd1            , //写FIFO单次写操作访问的ram_mem单元个数 FIFO_WR_WIDTH/WR_FIFO_RAM_WIDTH
+                WR_FIFO_RD_IND          = 'd2            , //写FIFO单次读操作访问的ram_mem单元个数 AXI_WIDTH/WR_FIFO_RAM_ADDR_WIDTH        
+                WR_FIFO_RAM_WIDTH       = FIFO_WR_WIDTH  , //写FIFO RAM存储器的位宽
+                WR_FIFO_WR_L2           = 'd0            , //log2(WR_FIFO_WR_IND)
+                WR_FIFO_RD_L2           = 'd1            , //log2(WR_FIFO_RD_IND)
+                WR_FIFO_RAM_RD2WR       = 'd2            , //读数据位宽和写数据位宽的比, 即一次读取的RAM单元深度, RAM_RD2WR = RD_WIDTH/WR_WIDTH, 当读位宽小于等于写位宽时, 值为1   
+
+                //读FIFO相关参数
+                RD_FIFO_RAM_DEPTH       = 'd2048         , //读FIFO内部RAM存储器深度
+                RD_FIFO_RAM_ADDR_WIDTH  = 'd11           , //读FIFO内部RAM读写地址宽度, log2(RD_FIFO_RAM_DEPTH)
+                RD_FIFO_WR_IND          = 'd2            , //读FIFO单次写操作访问的ram_mem单元个数 AXI_WIDTH/RD_FIFO_RAM_WIDTH
+                RD_FIFO_RD_IND          = 'd1            , //读FIFO单次读操作访问的ram_mem单元个数 FIFO_RD_WIDTH/RD_FIFO_RAM_ADDR_WIDTH        
+                RD_FIFO_RAM_WIDTH       = FIFO_RD_WIDTH  , //读FIFO RAM存储器的位宽
+                RD_FIFO_WR_L2           = 'd1            , //log2(RD_FIFO_WR_IND)
+                RD_FIFO_RD_L2           = 'd0            , //log2(RD_FIFO_RD_IND)
+                RD_FIFO_RAM_RD2WR       = 'd1              //读数据位宽和写数据位宽的比, 即一次读取的RAM单元深度, RAM_RD2WR = RD_WIDTH/WR_WIDTH, 当读位宽小于等于写位宽时, 值为1                  
     )
     (
         input   wire                        clk             , //AXI读写主机时钟
@@ -53,8 +73,13 @@ module axi_ctrl
         input   wire                        axi_rd_done       //AXI主机完成一次写操作
         
     );
-    
         
+    //自定义FIFO参数计算
+    parameter   RD_FIFO_WR_CNT_WIDTH = RD_FIFO_RAM_ADDR_WIDTH + 'd1 - RD_FIFO_WR_L2 , //读FIFO写端口计数器的位宽
+                RD_FIFO_RD_CNT_WIDTH = RD_FIFO_RAM_ADDR_WIDTH + 'd1 - RD_FIFO_RD_L2 , //读FIFO读端口计数器的位宽
+                WR_FIFO_WR_CNT_WIDTH = WR_FIFO_RAM_ADDR_WIDTH + 'd1 - WR_FIFO_WR_L2 , //写FIFO写端口计数器的位宽
+                WR_FIFO_RD_CNT_WIDTH = WR_FIFO_RAM_ADDR_WIDTH + 'd1 - WR_FIFO_RD_L2 ; //写FIFO读端口计数器的位宽
+    
     //FIFO数据数量计数器   
     wire [10:0]  cnt_rd_fifo_wrport      ;  //读FIFO写端口(对接AXI读主机)数据数量
     wire [10:0]  cnt_wr_fifo_rdport      ;  //写FIFO读端口(对接AXI写主机)数据数量    
@@ -262,7 +287,7 @@ module axi_ctrl
     end    */ 
 
     
-    //读FIFO, 从SDRAM中读出的数据先暂存于此
+/*     //读FIFO, 从SDRAM中读出的数据先暂存于此
     //使用FIFO IP核
 	rd_fifo rd_fifo_inst (
         .rst                (~rst_n_sync | rd_rst_sync  ),  //读复位时需要复位读FIFO
@@ -280,45 +305,23 @@ module axi_ctrl
         .wr_data_count      (cnt_rd_fifo_wrport         ),  //读FIFO写端口(对接AXI读主机)数据数量
         .wr_rst_busy        (rd_fifo_wr_rst_busy        ),     
         .rd_rst_busy        (                           )      
-);
+); */
 
-
-
-    //写FIFO, 待写入SDRAM的数据先暂存于此
-    //使用FIFO IP核
-    wr_fifo wr_fifo_inst (
-        .rst                (~rst_n_sync        ),  
-        .wr_clk             (wr_clk             ),  //写端口时钟
-        .rd_clk             (clk                ),  //读端口时钟是AXI主机时钟, AXI写主机读取数据
-        .din                (wr_data            ),  
-        .wr_en              (wr_en              ),  
-        .rd_en              (axi_writing        ),  //axi_master_wr正在写时,从写FIFO中不断读出数据
-        .dout               (axi_wr_data        ),  //读出的数据作为AXI写主机的输入数据
-        .full               (                   ),  
-        .almost_full        (                   ),  
-        .empty              (                   ),  
-        .almost_empty       (                   ),  
-        .rd_data_count      (cnt_wr_fifo_rdport ),  //写FIFO读端口(对接AXI写主机)数据数量
-        .wr_data_count      (                   ),  
-        .wr_rst_busy        (                   ),  
-        .rd_rst_busy        (                   )   
-    );
-
-/*     //读FIFO, 从SDRAM中读出的数据先暂存于此
+    //读FIFO, 从SDRAM中读出的数据先暂存于此
     //使用自行编写的异步FIFO模块
     async_fifo
-    #(.RAM_DEPTH       ('d2048          ), //内部RAM存储器深度
-      .RAM_ADDR_WIDTH  ('d11            ), //内部RAM读写地址宽度, 需与RAM_DEPTH匹配
-      .WR_WIDTH        (AXI_WIDTH       ), //写数据位宽
-      .RD_WIDTH        (FIFO_RD_WIDTH   ), //读数据位宽
-      .WR_IND          ('d2             ), //单次写操作访问的ram_mem单元个数
-      .RD_IND          ('d1             ), //单次读操作访问的ram_mem单元个数         
-      .RAM_WIDTH       (FIFO_RD_WIDTH   ), //读端口数据位宽更小,使用读数据位宽作为RAM存储器的位宽
-      .WR_CNT_WIDTH    ('d11            ), //FIFO写端口计数器的位宽
-      .RD_CNT_WIDTH    ('d12            ), //FIFO读端口计数器的位宽
-      .WR_L2           ('d1             ), //log2(WR_IND), 决定写地址有效数据位个数及RAM位宽
-      .RD_L2           ('d0             ), //log2(RD_IND), 决定读地址有效低位
-      .RAM_RD2WR       ('d1             )  //读数据位宽和写数据位宽的比, 即一次读取的RAM单元深度, RAM_RD2WR = RD_WIDTH/WR_WIDTH, 当读位宽小于等于写位宽时, 值为1     
+    #(.RAM_DEPTH       (RD_FIFO_RAM_DEPTH       ), //内部RAM存储器深度
+      .RAM_ADDR_WIDTH  (RD_FIFO_RAM_ADDR_WIDTH  ), //内部RAM读写地址宽度, 需与RAM_DEPTH匹配
+      .WR_WIDTH        (AXI_WIDTH               ), //写数据位宽
+      .RD_WIDTH        (FIFO_RD_WIDTH           ), //读数据位宽
+      .WR_IND          (RD_FIFO_WR_IND          ), //单次写操作访问的ram_mem单元个数
+      .RD_IND          (RD_FIFO_RD_IND          ), //单次读操作访问的ram_mem单元个数         
+      .RAM_WIDTH       (RD_FIFO_RAM_WIDTH       ), //读端口数据位宽更小,使用读数据位宽作为RAM存储器的位宽
+      .WR_CNT_WIDTH    (RD_FIFO_WR_CNT_WIDTH    ), //FIFO写端口计数器的位宽
+      .RD_CNT_WIDTH    (RD_FIFO_RD_CNT_WIDTH    ), //FIFO读端口计数器的位宽
+      .WR_L2           (RD_FIFO_WR_L2           ), //log2(WR_IND), 决定写地址有效数据位个数及RAM位宽
+      .RD_L2           (RD_FIFO_RD_L2           ), //log2(RD_IND), 决定读地址有效低位
+      .RAM_RD2WR       (RD_FIFO_RAM_RD2WR       )  //读数据位宽和写数据位宽的比, 即一次读取的RAM单元深度, RAM_RD2WR = RD_WIDTH/WR_WIDTH, 当读位宽小于等于写位宽时, 值为1     
                 )
     rd_fifo_inst
     (
@@ -339,22 +342,42 @@ module axi_ctrl
     );
     //自定义FIFO没有复位busy信号
     assign rd_fifo_wr_rst_busy = 1'b0;
+
+/*     //写FIFO, 待写入SDRAM的数据先暂存于此
+    //使用FIFO IP核
+    wr_fifo wr_fifo_inst (
+        .rst                (~rst_n_sync        ),  
+        .wr_clk             (wr_clk             ),  //写端口时钟
+        .rd_clk             (clk                ),  //读端口时钟是AXI主机时钟, AXI写主机读取数据
+        .din                (wr_data            ),  
+        .wr_en              (wr_en              ),  
+        .rd_en              (axi_writing        ),  //axi_master_wr正在写时,从写FIFO中不断读出数据
+        .dout               (axi_wr_data        ),  //读出的数据作为AXI写主机的输入数据
+        .full               (                   ),  
+        .almost_full        (                   ),  
+        .empty              (                   ),  
+        .almost_empty       (                   ),  
+        .rd_data_count      (cnt_wr_fifo_rdport ),  //写FIFO读端口(对接AXI写主机)数据数量
+        .wr_data_count      (                   ),  
+        .wr_rst_busy        (                   ),  
+        .rd_rst_busy        (                   )   
+    ); */
     
     //写FIFO, 待写入SDRAM的数据先暂存于此
     //使用自定义异步FIFO
     async_fifo
-    #(.RAM_DEPTH       ('d2048       ), //内部RAM存储器深度
-      .RAM_ADDR_WIDTH  ('d11         ), //内部RAM读写地址宽度, 需与RAM_DEPTH匹配
-      .WR_WIDTH        (FIFO_WR_WIDTH), //写数据位宽
-      .RD_WIDTH        (AXI_WIDTH    ), //读数据位宽
-      .WR_IND          ('d1          ), //单次写操作访问的ram_mem单元个数
-      .RD_IND          ('d2          ), //单次读操作访问的ram_mem单元个数         
-      .RAM_WIDTH       (FIFO_WR_WIDTH), //RAM单元的位宽
-      .WR_L2           ('d0          ), //log2(WR_IND), 决定写地址有效数据位个数及RAM位宽
-      .RD_L2           ('d1          ), //log2(RD_IND), 决定读地址有效低位
-      .WR_CNT_WIDTH    ('d12         ), //FIFO写端口计数器的位宽RAM_ADDR_WIDTH + 'd1 - WR_L2
-      .RD_CNT_WIDTH    ('d11         ), //FIFO读端口计数器的位宽RAM_ADDR_WIDTH + 'd1 - RD_L2  
-      .RAM_RD2WR       ('d2          )  //读数据位宽和写数据位宽的比, 即一次读取的RAM单元深度, RAM_RD2WR = RD_WIDTH/WR_WIDTH, 当读位宽小于等于写位宽时, 值为1            
+    #(.RAM_DEPTH       (WR_FIFO_RAM_DEPTH       ), //内部RAM存储器深度
+      .RAM_ADDR_WIDTH  (WR_FIFO_RAM_ADDR_WIDTH  ), //内部RAM读写地址宽度, 需与RAM_DEPTH匹配
+      .WR_WIDTH        (FIFO_WR_WIDTH           ), //写数据位宽
+      .RD_WIDTH        (AXI_WIDTH               ), //读数据位宽
+      .WR_IND          (WR_FIFO_WR_IND          ), //单次写操作内部RAM地址增量, WR_WIDTH/RAM_WIDTH
+      .RD_IND          (WR_FIFO_RD_IND          ), //单次读操作内部RAM地址增量, RD_WIDTH/RAM_WIDTH         
+      .RAM_WIDTH       (WR_FIFO_RAM_WIDTH       ), //RAM单元的位宽
+      .WR_L2           (WR_FIFO_WR_L2           ), //log2(WR_IND), 决定写地址有效数据位个数及RAM位宽
+      .RD_L2           (WR_FIFO_RD_L2           ), //log2(RD_IND), 决定读地址有效低位
+      .WR_CNT_WIDTH    (WR_FIFO_WR_CNT_WIDTH    ), //FIFO写端口计数器的位宽RAM_ADDR_WIDTH + 'd1 - WR_L2
+      .RD_CNT_WIDTH    (WR_FIFO_RD_CNT_WIDTH    ), //FIFO读端口计数器的位宽RAM_ADDR_WIDTH + 'd1 - RD_L2  
+      .RAM_RD2WR       (WR_FIFO_RAM_RD2WR       )  //读数据位宽和写数据位宽的比, 即一次读取的RAM单元深度, RAM_RD2WR = RD_WIDTH/WR_WIDTH, 当读位宽小于等于写位宽时, 值为1            
     )
     wr_fifo_inst
     (
@@ -372,7 +395,7 @@ module axi_ctrl
         .rd_data         (axi_wr_data        ), //读出的数据作为AXI写主机的输入数据
         .fifo_empty      (                   ), //FIFO读空
         .rd_data_count   (cnt_wr_fifo_rdport )  //写FIFO读端口(对接AXI写主机)数据数量
-    );     */
+    );    
     
     //读FIFO可读标志,表示读FIFO中有数据可以对外输出
     assign rd_valid = ~rd_fifo_empty;

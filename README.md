@@ -1,6 +1,6 @@
 #### 关于
 
-本项目在Xilinx FPGA平台上实现了对DDR3 SDRAM读写操作，并通过RS232串口将图像数据存到SDRAM存储器，接着读取存储数据内容，并通过HDMI音视频接口实现图像/视频显示，其中DDR3读写控制器是AXI总线接口从机。本仓库的[non_fifo_ip branch](https://github.com/lauchinyuan/FPGA_DDR3_Ctrl/tree/non_fifo_ip)提供了不使用FIFO IP核的实现方案，即利用自行设计的异步FIFO模块，取代FIFO IP核，实测其部署后的资源开销更小。
+本项目在Xilinx FPGA平台上实现了对DDR3 SDRAM读写操作，通过SD卡接口将先图像数据存到SDRAM存储器，接着读取存储数据内容，并通过HDMI音视频接口实现图像/视频显示，其中DDR3读写控制器是AXI总线接口从机。本仓库的[non_fifo_ip branch](https://github.com/lauchinyuan/FPGA_DDR3_Ctrl/tree/non_fifo_ip)提供了不使用FIFO IP核的实现方案，即利用自行设计的异步FIFO模块，取代FIFO IP核，实测其部署后的资源开销更小。sd卡读取模块使用开源项目，项目链接：https://github.com/WangXuan95/FPGA-SDcard-Reader，目前暂未对其进行更多优化，后续有需要再进行开发。
 
 **若您想复现该工程，请先阅读本文最后一段，有任何问题欢迎您通过lauchinyuan@yeah.net联系我，一起探讨学习。**
 
@@ -30,11 +30,11 @@ FPGA上板实验的效果如图1-3所示，硬件实验平台使用的是博宸�
 
 [xci](./xci)目录存放了项目中用到的所有IP核文件配置信息，在Vivado中作为source添加即可，其中rgb2dvi IP核使用[Digilent开源IP核](https://github.com/Digilent/vivado-library/tree/master/ip)，需要在Vivado上添加IP核仓库。
 
-图像数据处理方面， [matlab](./matlab)目录提供了将图像转换为16进制像素值txt文件的MATLAB脚本。而[img](./img)文件夹则是一些测试图像文件，[txt](，/txt)文件夹是转换后的数据文本文件， 可以通过串口发送。
+图像数据处理方面， [matlab](./matlab)目录提供了将图像转换为16进制像素值txt文件的MATLAB脚本。而[img](./img)文件夹则是一些测试图像文件，[txt](，/txt)文件夹是转换后的数据文本文件， 可以通过串口直接以文件形式发送或保存到SD卡根目录进行读取。
 
 #### 数据流&框图
 
-本项目的结构示意图如图3
+本项目的结构示意图如图3(SD卡版本将uart_receiver模块改为sd_file_reader)
 
 ![](./img/README/structure.jpg)
 
@@ -42,7 +42,7 @@ FPGA上板实验的效果如图1-3所示，硬件实验平台使用的是博宸�
 
 处理数据的流程具体说明如下：
 
-1. RS232串口接收上位机发送的图像像素数据。
+1. 将图像数据文本存到sd卡根目录文件中。
 2. 像素数据存到"写FIFO"中，进行缓存。
 3. "写FIFO"中的数据数量满足设定值，向AXI写主机发送写数据请求。
 4. AXI写主机收到写请求，发起AXI总线写动作，将数据发送到AXI从机(DDR3 MIG IP核)。

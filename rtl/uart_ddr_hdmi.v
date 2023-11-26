@@ -4,28 +4,50 @@
 // Email: lauchinyuan@yeah.net
 // Create Date: 2023/09/29 11:40:03
 // Module Name: uart_ddr_hdmi
-// Description: SDRAM读写测试顶层模块, 从RS232串口读取32bit RGB数据
+// Description: SDRAM读写测试顶层模块, 从SD卡读取32bit RGB数据
 // 将其缓存到SDRAM中, 接着从SDRAM读出数据, 将其转换为VGA时序, 接着通过IP核将VGA时序转换为HDMI接口数据
 // 最终实现在屏幕上输出图像
+// sd_file_reader模块使用他人开源项目, 参见https://github.com/WangXuan95/FPGA-SDcard-Reader, 暂未对其进行优化
 //////////////////////////////////////////////////////////////////////////////////
 
 
 module uart_ddr_hdmi
-    #(parameter FIFO_WR_WIDTH = 'd32            ,//用户端FIFO写位宽
-                FIFO_RD_WIDTH = 'd32            ,//用户端FIFO读位宽
-                UART_BPS      = 'd1_500_000     ,//串口波特率
-                UART_CLK_FREQ = 'd100_000_000   ,//串口时钟频率
-                UI_FREQ       = 'd160_000_000   ,//DDR3控制器输出的用户时钟频率
-                WR_BEG_ADDR   = 'd0             ,//写FIFO写起始地址
-                WR_END_ADDR   = 'd4915199       ,//写FIFO写终止地址 
-//                WR_END_ADDR   = 'd1228799       ,
-                WR_BURST_LEN  = 'd31            ,//写FIFO写突发长度为WR_BURST_LEN+1
-                RD_BEG_ADDR   = 'd0             ,//读FIFO读起始地址
-                RD_END_ADDR   = 'd4915199       ,//读FIFO读终止地址 
-//                RD_END_ADDR   = 'd1228799       ,
-                RD_BURST_LEN  = 'd31            ,  //读FIFO读突发长度为RD_BURST_LEN+1
-                AXI_WIDTH     = 'd64            ,  //AXI总线读写数据位宽
-                AXI_AXSIZE    = 3'b011             //AXI总线的axi_axsize, 需要与AXI_WIDTH对应
+    #(parameter FIFO_WR_WIDTH           = 'd8            ,//用户端FIFO写位宽
+                FIFO_RD_WIDTH           = 'd32           ,//用户端FIFO读位宽
+/*                 UART_BPS                = 'd1_500_000    ,//串口波特率
+                UART_CLK_FREQ           = 'd100_000_000  ,//串口时钟频率 */
+                UI_FREQ                 = 'd160_000_000  ,//DDR3控制器输出的用户时钟频率
+                WR_BEG_ADDR             = 'd0            ,//写FIFO写起始地址
+                WR_END_ADDR             = 'd4915200*192-1  ,//写FIFO写终止地址, 192为图像帧数
+                WR_BURST_LEN            = 'd31           ,//写FIFO写突发长度为WR_BURST_LEN+1
+                RD_BEG_ADDR             = 'd0            ,//读FIFO读起始地址
+                RD_END_ADDR             = 'd4915200*192-1  ,//读FIFO读终止地址 
+                RD_BURST_LEN            = 'd31           ,//读FIFO读突发长度为RD_BURST_LEN+1
+                
+                //AXI总线相关参数
+                AXI_WIDTH               = 'd64           ,  //AXI总线读写数据位宽
+                AXI_AXSIZE              = 3'b011         ,  //AXI总线的axi_axsize, 需要与AXI_WIDTH对应
+                AXI_WSTRB_W             = 'd8            ,  //axi_wstrb的位宽, AXI_WIDTH/8
+                
+                //写FIFO相关参数
+                WR_FIFO_RAM_DEPTH       = 'd2048         , //写FIFO内部RAM存储器深度
+                WR_FIFO_RAM_ADDR_WIDTH  = 'd11           , //写FIFO内部RAM读写地址宽度, log2(WR_FIFO_RAM_DEPTH)
+                WR_FIFO_WR_IND          = 'd1            , //写FIFO单次写操作访问的ram_mem单元个数 FIFO_WR_WIDTH/WR_FIFO_RAM_WIDTH
+                WR_FIFO_RD_IND          = 'd8            , //写FIFO单次读操作访问的ram_mem单元个数 AXI_WIDTH/WR_FIFO_RAM_ADDR_WIDTH        
+                WR_FIFO_RAM_WIDTH       = FIFO_WR_WIDTH  , //写FIFO RAM存储器的位宽
+                WR_FIFO_WR_L2           = 'd0            , //log2(WR_FIFO_WR_IND)
+                WR_FIFO_RD_L2           = 'd3            , //log2(WR_FIFO_RD_IND)
+                WR_FIFO_RAM_RD2WR       = 'd8            , //读数据位宽和写数据位宽的比, 即一次读取的RAM单元深度, RAM_RD2WR = RD_WIDTH/WR_WIDTH, 当读位宽小于等于写位宽时, 值为1   
+
+                //读FIFO相关参数
+                RD_FIFO_RAM_DEPTH       = 'd2048         , //读FIFO内部RAM存储器深度
+                RD_FIFO_RAM_ADDR_WIDTH  = 'd11           , //读FIFO内部RAM读写地址宽度, log2(RD_FIFO_RAM_DEPTH)
+                RD_FIFO_WR_IND          = 'd2            , //读FIFO单次写操作访问的ram_mem单元个数 AXI_WIDTH/RD_FIFO_RAM_WIDTH
+                RD_FIFO_RD_IND          = 'd1            , //读FIFO单次读操作访问的ram_mem单元个数 FIFO_RD_WIDTH/RD_FIFO_RAM_ADDR_WIDTH        
+                RD_FIFO_RAM_WIDTH       = FIFO_RD_WIDTH  , //读FIFO RAM存储器的位宽
+                RD_FIFO_WR_L2           = 'd1            , //log2(RD_FIFO_WR_IND)
+                RD_FIFO_RD_L2           = 'd0            , //log2(RD_FIFO_RD_IND)
+                RD_FIFO_RAM_RD2WR       = 'd1              //读数据位宽和写数据位宽的比, 即一次读取的RAM单元深度, RAM_RD2WR = RD_WIDTH/WR_WIDTH, 当读位宽小于等于写位宽时, 值为1  
     )
     (
         input   wire        clk           , //系统时钟
@@ -59,11 +81,17 @@ module uart_ddr_hdmi
         inout   wire [3:0]  ddr3_dqs_p    ,
         output  wire        ddr3_cs_n     ,
         output  wire [3:0]  ddr3_dm       ,
-        output  wire        ddr3_odt      
+        output  wire        ddr3_odt      ,
         
+        //SD卡接口
+        output wire       sdclk           ,
+        inout             sdcmd           ,
+        input  wire       sddat0          ,            
+        output  wire      sddat1          ,            
+        output  wire      sddat2          ,            
+        output  wire      sddat3          ,
+        output  wire      rd_file_done      
     );
-    
-    localparam  FIFO_WR_BYTE  =  FIFO_WR_WIDTH >> 3; //写FIFO写端口字节数
     //时钟复位相关连线
     wire        clk_ddr                     ;
     wire        clk_fifo                    ;
@@ -72,7 +100,7 @@ module uart_ddr_hdmi
     wire        locked_rst_n                ;  //和locked相与的复位信号, 作为DDR接口的真正复位信号
     wire        locked_calib_rst_n          ;  //和locked以及calib_done相与的复位信号, 为高时代表时钟稳定且DDR校准完成
     
-    //UART接口相关连线
+    //SD卡接口相关连线
     wire [FIFO_WR_WIDTH-1:0] fifo_wr_data   ; //FIFO写数据
     wire                     fifo_wr_en     ; //FIFO写使能  
 
@@ -90,6 +118,13 @@ module uart_ddr_hdmi
     wire                     vsync          ; //场同步
     wire                     pix_valid      ; //为高时代表输出的图像是有效数据帧
     wire [23:0]              rgb_out        ; //输出的RGB图像信号
+    
+    //SD卡状态变量输出, 可作为调试用
+    wire [3:0]               card_stat      ;
+    wire [1:0]               card_type      ;
+    wire [1:0]               filesystem_type;
+    wire                     file_found     ;
+    
     
     //时钟生成模块,产生FIFO读写时钟及AXI读写主机工作时钟
       clk_gen clk_gen_inst(
@@ -121,13 +156,13 @@ module uart_ddr_hdmi
     
     assign rd_mem_enable = key_state_out; //按键控制读存储器使能
     
-    //串口数据接收器
+/*     //串口数据接收器
     uart_receiver
     #(
-        .UART_BPS        (UART_BPS        ),   //串口波特率
-        .CLK_FREQ        (UART_CLK_FREQ   ),   //时钟频率
-        .FIFO_WR_WIDTH   (FIFO_WR_WIDTH   ),   //写FIFO写端口数据位宽
-        .FIFO_WR_BYTE    (FIFO_WR_BYTE    )    //写FIFO写端口字节数
+        .UART_BPS        (UART_BPS          ),   //串口波特率
+        .CLK_FREQ        (UART_CLK_FREQ     ),   //时钟频率
+        .FIFO_WR_WIDTH   (FIFO_WR_WIDTH     ),   //写FIFO写端口数据位宽
+        .FIFO_WR_BYTE    (FIFO_WR_WIDTH >> 3)    //写FIFO写端口字节数
     ) 
     uart_receiver_inst
     (
@@ -137,7 +172,45 @@ module uart_ddr_hdmi
         
         .fifo_wr_data(fifo_wr_data), //FIFO写数据
         .fifo_wr_en  (fifo_wr_en  )  //FIFO写使能
+    ); */
+    
+    
+    
+    //SD读卡模块
+    sd_file_reader #(
+    .FILE_NAME_LEN (11           ), // length of FILE_NAME (in bytes). Since the length of "example.txt" is 11, so here is 11.
+    .FILE_NAME     ("fisherg.txt"), // file name to read, ignore upper and lower case
+                                    // For example, if you want to read a file named "HeLLo123.txt", this parameter can be "hello123.TXT", "HELLO123.txt" or "HEllo123.Txt"
+    .CLK_DIV       (3            ) // when clk =   0~ 25MHz , set CLK_DIV = 3'd1,
+                                    // when clk =  25~ 50MHz , set CLK_DIV = 3'd2,
+                                    // when clk =  50~100MHz , set CLK_DIV = 3'd3,
+                                    // when clk = 100~200MHz , set CLK_DIV = 3'd4,
+                                    // ......
+//    .SIMULATE      (0            )  // 0:normal use.         1:only for simulation
+    ) 
+    sd_file_reader_inst
+    (
+        // rstn active-low, 1:working, 0:reset
+        .rstn              (locked_calib_rst_n),  //SDRAM校准完成后才允许从SD CARD读取数据
+        // clock   
+        .clk               (clk_fifo          ),  //和FIFO时钟同步
+        // SDcard signals (connect to SDcard), this design do not use sddat1~sddat3.
+        .sdclk             (sdclk             ),
+        .sdcmd             (sdcmd             ),
+        .sddat0            (sddat0            ),
+        // status output (optional for user)
+        .card_stat         (card_stat         ),  // show the sdcard initialize status
+        .rd_file_done      (rd_file_done      ),  // 文件读取成功标志
+        .card_type         (card_type         ),  // 0=UNKNOWN    , 1=SDv1    , 2=SDv2  , 3=SDHCv2
+        .filesystem_type   (filesystem_type   ),  // 0=UNASSIGNED , 1=UNKNOWN , 2=FAT16 , 3=FAT32 
+        .file_found        (file_found        ),  // 0=file not found, 1=file found
+        // file content data output (sync with clk)
+        .outen             (fifo_wr_en        ),  // when outen=1, a byte of file content is read out from outbyte
+        .outbyte           (fifo_wr_data      )   // a byte of file content
     );
+
+    //使用SD卡SDIO单线模式, 将sddat1-sddat3驱动为1, 防止进入SPI模式
+    assign {sddat1, sddat2, sddat3} = 3'b111;
     
     
     //VGA时序生成器
@@ -171,10 +244,30 @@ module uart_ddr_hdmi
     
     //DDR3控制接口
     ddr_interface
-    #(.FIFO_WR_WIDTH(FIFO_WR_WIDTH),  //用户端FIFO读写位宽
-      .FIFO_RD_WIDTH(FIFO_RD_WIDTH),
-      .AXI_WIDTH    (AXI_WIDTH    ),  //AXI总线读写数据位宽
-      .AXI_AXSIZE   (AXI_AXSIZE   )   //AXI总线的axi_awsize, 需要与AXI_WIDTH对应
+    #(.FIFO_WR_WIDTH           (FIFO_WR_WIDTH           ),  //用户端FIFO读写位宽
+      .FIFO_RD_WIDTH           (FIFO_RD_WIDTH           ),
+      .AXI_WIDTH               (AXI_WIDTH               ),  //AXI总线读写数据位宽
+      .AXI_AXSIZE              (AXI_AXSIZE              ),  //AXI总线的axi_awsize, 需要与AXI_WIDTH对应
+      
+      //写FIFO相关参数
+      .WR_FIFO_RAM_DEPTH       (WR_FIFO_RAM_DEPTH       ), //写FIFO内部RAM存储器深度
+      .WR_FIFO_RAM_ADDR_WIDTH  (WR_FIFO_RAM_ADDR_WIDTH  ), //写FIFO内部RAM读写地址宽度, log2(WR_FIFO_RAM_DEPTH)
+      .WR_FIFO_WR_IND          (WR_FIFO_WR_IND          ), //写FIFO单次写操作访问的ram_mem单元个数 FIFO_WR_WIDTH/WR_FIFO_RAM_WIDTH
+      .WR_FIFO_RD_IND          (WR_FIFO_RD_IND          ), //写FIFO单次读操作访问的ram_mem单元个数 AXI_WIDTH/WR_FIFO_RAM_ADDR_WIDTH        
+      .WR_FIFO_RAM_WIDTH       (WR_FIFO_RAM_WIDTH       ), //写FIFO RAM存储器的位宽
+      .WR_FIFO_WR_L2           (WR_FIFO_WR_L2           ), //log2(WR_FIFO_WR_IND)
+      .WR_FIFO_RD_L2           (WR_FIFO_RD_L2           ), //log2(WR_FIFO_RD_IND)
+      .WR_FIFO_RAM_RD2WR       (WR_FIFO_RAM_RD2WR       ), //读数据位宽和写数据位宽的比, 即一次读取的RAM单元深度, RAM_RD2WR = RD_WIDTH/WR_WIDTH, 当读位宽小于等于写位宽时, 值为1   
+
+      //读FIFO相关参数
+      .RD_FIFO_RAM_DEPTH       (RD_FIFO_RAM_DEPTH       ), //读FIFO内部RAM存储器深度
+      .RD_FIFO_RAM_ADDR_WIDTH  (RD_FIFO_RAM_ADDR_WIDTH  ), //读FIFO内部RAM读写地址宽度, log2(RD_FIFO_RAM_DEPTH)
+      .RD_FIFO_WR_IND          (RD_FIFO_WR_IND          ), //读FIFO单次写操作访问的ram_mem单元个数 AXI_WIDTH/RD_FIFO_RAM_WIDTH
+      .RD_FIFO_RD_IND          (RD_FIFO_RD_IND          ), //读FIFO单次读操作访问的ram_mem单元个数 FIFO_RD_WIDTH/RD_FIFO_RAM_ADDR_WIDTH        
+      .RD_FIFO_RAM_WIDTH       (RD_FIFO_RAM_WIDTH       ), //读FIFO RAM存储器的位宽
+      .RD_FIFO_WR_L2           (RD_FIFO_WR_L2           ), //log2(RD_FIFO_WR_IND)
+      .RD_FIFO_RD_L2           (RD_FIFO_RD_L2           ), //log2(RD_FIFO_RD_IND)
+      .RD_FIFO_RAM_RD2WR       (RD_FIFO_RAM_RD2WR       )  //读数据位宽和写数据位宽的比, 即一次读取的RAM单元深度, RAM_RD2WR = RD_WIDTH/WR_WIDTH, 当读位宽小于等于写位宽时, 值为1  
       )
       ddr_interface_inst
         (
