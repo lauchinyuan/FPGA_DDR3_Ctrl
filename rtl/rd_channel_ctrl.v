@@ -40,7 +40,7 @@ module rd_channel_ctrl
         //AXI读主机端           
         input   wire                        axi_reading     , //AXI主机读正在进行
         input   wire [AXI_WIDTH-1:0]        axi_rd_data     , //从AXI读主机读到的数据,写入读FIFO
-        input   wire                        axi_rd_done     , //AXI主机完成一次写操作
+        input   wire                        axi_rd_done     , //AXI主机完成一次读操作
         
         //读通道仲裁器端
         input   wire                        rd_grant        , //仲裁器发来的授权
