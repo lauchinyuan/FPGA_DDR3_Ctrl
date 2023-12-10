@@ -25,6 +25,11 @@ module multichannel_rd_arbiter(
         input   wire [29:0]         rd_addr2        , //读通道2发来的读地址
         input   wire [29:0]         rd_addr3        , //读通道3发来的读地址
         
+        input   wire [7:0]          rd_len0         , //通道0发来的读突发长度
+        input   wire [7:0]          rd_len1         , //通道1发来的读突发长度
+        input   wire [7:0]          rd_len2         , //通道2发来的读突发长度
+        input   wire [7:0]          rd_len3         , //通道3发来的读突发长度
+        
         //发给各通道读控制器的读授权
         output  wire [3:0]          rd_grant        , //rd_grant[i]代表读通道i的读授权
         
@@ -33,7 +38,8 @@ module multichannel_rd_arbiter(
         
         //发送到AXI读主机的仲裁结果
         output  reg                 axi_rd_start    , //仲裁后有效的读请求
-        output  reg [29:0]          axi_rd_addr        //仲裁后有效的读地址输出
+        output  reg [29:0]          axi_rd_addr     , //仲裁后有效的读地址输出
+        output  reg [7:0]           axi_rd_len        //仲裁后有效的读突发长度
     );
     
     //状态机状态定义
@@ -305,26 +311,32 @@ module multichannel_rd_arbiter(
             IDLE: begin
                 axi_rd_addr  = 'b0;
                 axi_rd_start = 'b0;
+                axi_rd_len   = 'b0;
             end
             S0: begin
                 axi_rd_addr  = rd_addr0;
                 axi_rd_start = rd_req[0];
+                axi_rd_len   = rd_len0;
             end
             S1: begin
                 axi_rd_addr  = rd_addr1;
                 axi_rd_start = rd_req[1];
+                axi_rd_len   = rd_len1;
             end
             S2: begin
                 axi_rd_addr  = rd_addr2;
                 axi_rd_start = rd_req[2];
+                axi_rd_len   = rd_len2;
             end
             S3: begin
                 axi_rd_addr  = rd_addr3;
                 axi_rd_start = rd_req[3];
+                axi_rd_len   = rd_len3;
             end
             default: begin
                 axi_rd_addr  = 'b0;
                 axi_rd_start = 'b0;
+                axi_rd_len   = 'b0;
             end
         endcase
     end
