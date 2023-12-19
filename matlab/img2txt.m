@@ -2,14 +2,14 @@ clc, clear;
 %% 像素数据获取
 file_name = "fisherGirlStatue_1280_960";
 img = imread(fullfile("../img/",file_name+".jpg")); %读取原始文件
-[height, weight, channel] = size(img);  % 获取图片大小参数
+[height, width, channel] = size(img);  % 获取图片大小参数
 % 将图片同一像素位置上的RGB值排在一起构成RGB888数据
 imgrgb = zeros(size(img));  %开辟空间
 imgrgb = imgrgb(:);  % 转换为1列
 for h=1:height  % 获得Uint8格式的RGB单通道数据
-    for w=1:weight
+    for w=1:width
         for c=1:channel
-            imgrgb((h-1)*weight*channel+(w-1)*channel+c) = img(h, w, c);
+            imgrgb((h-1)*width*channel+(w-1)*channel+c) = img(h, w, c);
         end
     end
 end
@@ -18,9 +18,9 @@ end
 %% 数据处理与保存
 % 将RGB数据组合成32bit数据, 方便存入硬件FIFO中
 % R(8bit)+G(8bit)+B(8bit)+0(8bit)
-rgb32b = zeros(height, weight); % 开辟空间
+rgb32b = zeros(height, width); % 开辟空间
 rgb32b = rgb32b(:);  % 转换为1列
-for i=1:height*weight
+for i=1:height*width
     r = imgrgb((i-1)*3+1);
     g = imgrgb((i-1)*3+2);
     b = imgrgb((i-1)*3+3);
