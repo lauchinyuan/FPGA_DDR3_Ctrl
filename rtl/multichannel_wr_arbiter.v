@@ -184,6 +184,8 @@ module multichannel_wr_arbiter
                     end else begin
                         next_state = state;
                     end 
+                end else begin
+                    next_state = state;
                 end
             end
             
@@ -208,6 +210,8 @@ module multichannel_wr_arbiter
                     end else begin
                         next_state = state;
                     end 
+                end else begin
+                    next_state = state;
                 end
             end
             
@@ -232,6 +236,8 @@ module multichannel_wr_arbiter
                     end else begin
                         next_state = state;
                     end 
+                end else begin
+                    next_state = state;
                 end
             end
             

@@ -188,6 +188,8 @@ module multichannel_rd_arbiter(
                     end else begin
                         next_state = state;
                     end 
+                end else begin
+                    next_state = state;
                 end
             end
             
@@ -212,6 +214,8 @@ module multichannel_rd_arbiter(
                     end else begin
                         next_state = state;
                     end 
+                end else begin
+                    next_state = state;
                 end
             end
             
@@ -236,6 +240,8 @@ module multichannel_rd_arbiter(
                     end else begin
                         next_state = state;
                     end 
+                end else begin
+                    next_state = state;
                 end
             end
             

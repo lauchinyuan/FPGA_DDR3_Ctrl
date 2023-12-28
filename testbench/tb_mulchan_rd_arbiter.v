@@ -23,6 +23,11 @@ module tb_mulchan_rd_arbiter(
     wire [29:0]         rd_addr2        ; //读通道2发来的读地址
     wire [29:0]         rd_addr3        ; //读通道3发来的读地址
     
+    wire [7:0]          rd_len0         ; //通道0发来的读突发长度
+    wire [7:0]          rd_len1         ; //通道1发来的读突发长度
+    wire [7:0]          rd_len2         ; //通道2发来的读突发长度
+    wire [7:0]          rd_len3         ; //通道3发来的读突发长度
+    
     //发给各通道读控制器的读授权
     wire [3:0]          rd_grant        ; //rd_grant[i]代表读通道i的读授权
     
@@ -65,6 +70,11 @@ module tb_mulchan_rd_arbiter(
         .rd_addr2        (rd_addr2        ), //读通道2发来的读地址
         .rd_addr3        (rd_addr3        ), //读通道3发来的读地址
         
+        .rd_len0         (rd_len0         ), //通道0发来的读突发长度
+        .rd_len1         (rd_len1         ), //通道1发来的读突发长度
+        .rd_len2         (rd_len2         ), //通道2发来的读突发长度
+        .rd_len3         (rd_len3         ), //通道3发来的读突发长度
+        
         //发给各通道读控制器的读授权
         .rd_grant        (rd_grant        ), //rd_grant[i]代表读通道i的读授权
         
@@ -76,12 +86,17 @@ module tb_mulchan_rd_arbiter(
         .axi_rd_addr     (axi_rd_addr     )   //仲裁后有效的读地址输出
     );
     
-    //每个读通道的地址固定
-    assign rd_addr0 = 'd0       ;
-    assign rd_addr1 = 'd1       ;
-    assign rd_addr2 = 'd2       ;
-    assign rd_addr3 = 'd3       ;
-    
+    //每个读通道的地址、读突发长度固定
+    assign rd_addr0 = 'd0   ;
+    assign rd_addr1 = 'd1   ;
+    assign rd_addr2 = 'd2   ;
+    assign rd_addr3 = 'd3   ;
+        
+        
+    assign rd_len0  = 'd7   ; 
+    assign rd_len1  = 'd6   ; 
+    assign rd_len2  = 'd5   ; 
+    assign rd_len3  = 'd4   ; 
     
     //axi_reading
     always@(posedge clk or negedge rst_n) begin

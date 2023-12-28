@@ -25,7 +25,7 @@ module tb_wr_multichan_interface(
               WR_FIFO_RD_L2           = 'd1            , //log2(WR_FIFO_RD_IND)
               WR_FIFO_RAM_RD2WR       = 'd2            ,
 
-              AXI_WSTRB_W             = AXI_WIDTH >> 3 ; 
+              AXI_WSTRB_W             = AXI_WIDTH >> 3 ;
 
     //时钟、复位
     reg                         clk                 ; //AXI主机读写时钟
