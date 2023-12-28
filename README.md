@@ -1,8 +1,13 @@
 #### 关于
 
-本项目在Xilinx FPGA平台上实现了对DDR3 SDRAM读写操作，并通过RS232串口将图像数据存到SDRAM存储器，接着读取存储数据内容，并通过HDMI音视频接口实现图像/视频显示，其中DDR3读写控制器是AXI总线接口从机。本仓库的[non_fifo_ip branch](https://github.com/lauchinyuan/FPGA_DDR3_Ctrl/tree/non_fifo_ip)提供了不使用FIFO IP核的实现方案，即利用自行设计的异步FIFO模块，取代FIFO IP核，实测其部署后的资源开销更小。
+本项目在Xilinx FPGA平台上实现了对DDR3 SDRAM读写操作，并通过RS232串口将图像数据存到SDRAM存储器，接着读取存储数据内容，并通过HDMI音视频接口实现图像/视频显示，其中DDR3读写控制器是AXI总线接口从机。
 
-此外，若您觉得从串口发数据效率较低，[sd_ddr_hdmi](https://github.com/lauchinyuan/FPGA_DDR3_Ctrl/tree/sd_ddr_hdmi) branch提供了从SD卡读取数据到SDRAM的工程版本。
+##### 其它版本
+
+- [non_fifo_ip branch](https://github.com/lauchinyuan/FPGA_DDR3_Ctrl/tree/non_fifo_ip)提供了不使用FIFO IP核的实现方案，即利用自行设计的异步FIFO模块，取代FIFO IP核，实测其部署后的资源开销更小。
+
+- [sd_ddr_hdmi](https://github.com/lauchinyuan/FPGA_DDR3_Ctrl/tree/sd_ddr_hdmi) branch提供了从SD卡读取数据到SDRAM的工程版本。
+- [multi_channel](https://github.com/lauchinyuan/FPGA_DDR3_Ctrl/tree/multi_channel) branch实现了多通道读取SDRAM地址，并在一个屏幕上显示读取图像的简单示例，设计了读写控制逻辑及简单的通道优先级仲裁机制，ILA抓取波形确认无误。
 
 **若您想复现该工程，请先阅读本文最后一段，有任何问题欢迎您通过lauchinyuan@yeah.net联系我，一起探讨学习。**
 
