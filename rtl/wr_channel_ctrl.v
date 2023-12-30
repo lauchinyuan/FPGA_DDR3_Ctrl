@@ -94,9 +94,7 @@ module wr_channel_ctrl
     always@(posedge clk or negedge rst_n_sync) begin
         if(!rst_n_sync) begin
             wr_req <= 1'b0;
-        end else if(cnt_wr_fifo_rdport > real_wr_len && !wr_grant) begin //非授权状态下, fifo内的数据数量足够时拉高
-            wr_req <= 1'b1;
-        end else if(axi_wr_done && wr_grant && cnt_wr_fifo_rdport > real_wr_len) begin //在授权状态下wr_done信号到来时, 也具有拉高写请求的权限
+        end else if(cnt_wr_fifo_rdport > real_wr_len) begin //fifo内的数据数量足够时拉高
             wr_req <= 1'b1;
         end else if(wr_grant) begin  //被授权后拉低写请求
             wr_req <= 1'b0;

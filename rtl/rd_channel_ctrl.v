@@ -109,9 +109,7 @@ module rd_channel_ctrl
     always@(posedge clk or negedge rst_n_sync) begin
         if(!rst_n_sync) begin
             rd_req <= 1'b0;
-        end else if(cnt_rd_fifo_wrport < 512 && rd_mem_enable  && !rd_grant) begin //非授权状态下, fifo数量不够时拉高
-            rd_req <= 1'b1;
-        end else if(axi_rd_done && rd_grant && cnt_rd_fifo_wrport < 512) begin //在授权状态下rd_done信号到来时, 也具有拉高读请求的权限
+        end else if(cnt_rd_fifo_wrport < 512 && rd_mem_enable) begin //非授权状态下, fifo数量不够时拉高
             rd_req <= 1'b1;
         end else if(rd_grant) begin  //被授权后拉低读请求
             rd_req <= 1'b0;

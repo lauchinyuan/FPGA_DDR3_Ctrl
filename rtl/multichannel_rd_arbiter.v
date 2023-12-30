@@ -54,7 +54,7 @@ module multichannel_rd_arbiter(
     reg [3:0]           rd_req_d        ; //rd_req打一拍, 用于生成rd_req_acti信号
     wire                rd_req_acti     ; //rd_req_acti信号为高, 则代表有读通道开始发出rd_req读请求
 //    reg                 rd_req_acti_reg ; //对rd_req_acti信号进行锁存, 直到acti_valid信号有效为止
-    reg                 acti_valid      ; //对rd_req_acti的响应状态(有效或者无效), 防止当前通道没有读完, 因为rd_req发生突变而提前转换通道
+    reg                 rd_change_valid ; //防止当前通道没有读完, 因为rd_req发生突变而提前转换通道, 同时可保证一次突发传输只会有一个cycle的rd_start信号
     
     //通道使用历史记录变量
     reg [3:0]           rd_record       ; //rd_record[i]代表在这一轮, 通道i已经发送过读请求
@@ -80,17 +80,17 @@ module multichannel_rd_arbiter(
     //rd_req_acti, rd_req从0变化为非零值
     assign rd_req_acti = ((rd_req_d == 4'b0000) && (rd_req != 4'b0000))?1'b1:1'b0;
     
-    //acti_valid
+    //rd_change_valid
     //只有在每一个读请求都收到rd_done信号后, 才允许响应新的rd_req_acti_reg
     always@(posedge clk or negedge rst_n) begin
         if(!rst_n) begin
-            acti_valid <= 1'b1;         //复位时处于有效响应状态
-        end else if(axi_rd_start) begin //发送读请求, 则拉低有效状态
-            acti_valid <= 1'b0;
+            rd_change_valid <= 1'b1;    //复位时处于有效响应状态
+        end else if(((rd_req & rd_grant) != 4'b0000) && (rd_change_valid == 1'b1)) begin //req和grant握手成功, 则拉低有效状态
+            rd_change_valid <= 1'b0;
         end else if(rd_done) begin      //接收到rd_done
-            acti_valid <= 1'b1;
+            rd_change_valid <= 1'b1;
         end else begin
-            acti_valid <= acti_valid;
+            rd_change_valid <= rd_change_valid;
         end
     end
     
@@ -144,7 +144,7 @@ module multichannel_rd_arbiter(
             S0: begin  
                 //通道优先级: [1 > 2 > 3] > [1 > 2 > 3] > 0
                 //            (无授权历史)  (有授权历史)
-                if(rd_done || (rd_req_acti && acti_valid)) begin 
+                if(rd_done || (rd_req_acti && rd_change_valid)) begin 
                     if(rd_record == 4'b1111) begin //对所有通道都已经授权过一轮, 重新回到IDLE状态
                         next_state = IDLE;
                     end else if(rd_req_non_grant[1]) begin //通道1有本轮未经授权过的读请求
@@ -170,7 +170,7 @@ module multichannel_rd_arbiter(
             S1: begin
                 //通道优先级: [2 > 3 > 0] > [2 > 3 > 0] > 1
                 //            (无授权历史)  (有授权历史)                
-                if(rd_done || (rd_req_acti && acti_valid)) begin
+                if(rd_done || (rd_req_acti && rd_change_valid)) begin
                     if(rd_record == 4'b1111) begin //对所有通道都已经授权过一轮, 重新回到IDLE状态
                         next_state = IDLE;
                     end else if(rd_req_non_grant[2]) begin //通道2有本轮未经授权过的读请求
@@ -196,7 +196,7 @@ module multichannel_rd_arbiter(
             S2: begin
                 //通道优先级: [3 > 0 > 1] > [3 > 0 > 1] > 2
                 //            (无授权历史)  (有授权历史)                
-                if(rd_done || (rd_req_acti && acti_valid)) begin
+                if(rd_done || (rd_req_acti && rd_change_valid)) begin
                     if(rd_record == 4'b1111) begin //对所有通道都已经授权过一轮, 重新回到IDLE状态
                         next_state = IDLE;
                     end else if(rd_req_non_grant[3]) begin //通道2有本轮未经授权过的读请求
@@ -222,7 +222,7 @@ module multichannel_rd_arbiter(
             S3: begin
                 //通道优先级: [0 > 1 > 2] > [0 > 1 > 2] > 3
                 //            (无授权历史)  (有授权历史)                
-                if(rd_done || (rd_req_acti && acti_valid)) begin //在读完后进行通道切换判断, 或者在较长时间后在rd_req激活时进行通道切换判断
+                if(rd_done || (rd_req_acti && rd_change_valid)) begin //在读完后进行通道切换判断, 或者在较长时间后在rd_req激活时进行通道切换判断
                     if(rd_record == 4'b1111) begin //对所有通道都已经授权过一轮, 重新回到IDLE状态
                         next_state = IDLE;
                     end else if(rd_req_non_grant[0]) begin //通道2有本轮未经授权过的读请求
@@ -321,22 +321,22 @@ module multichannel_rd_arbiter(
             end
             S0: begin
                 axi_rd_addr  = rd_addr0;
-                axi_rd_start = rd_req[0];
+                axi_rd_start = rd_req[0] & rd_change_valid;
                 axi_rd_len   = rd_len0;
             end
             S1: begin
                 axi_rd_addr  = rd_addr1;
-                axi_rd_start = rd_req[1];
+                axi_rd_start = rd_req[1] & rd_change_valid;
                 axi_rd_len   = rd_len1;
             end
             S2: begin
                 axi_rd_addr  = rd_addr2;
-                axi_rd_start = rd_req[2];
+                axi_rd_start = rd_req[2] & rd_change_valid;
                 axi_rd_len   = rd_len2;
             end
             S3: begin
                 axi_rd_addr  = rd_addr3;
-                axi_rd_start = rd_req[3];
+                axi_rd_start = rd_req[3] & rd_change_valid;
                 axi_rd_len   = rd_len3;
             end
             default: begin

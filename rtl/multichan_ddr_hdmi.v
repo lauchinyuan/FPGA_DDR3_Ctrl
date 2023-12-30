@@ -28,11 +28,13 @@
 //////////////////////////////////////////////////////////////////////////////////
     
 module multichan_ddr_hdmi
-    #(parameter FIFO_WR_WIDTH           = 'd8               , //用户端FIFO写位宽
+    #(parameter FIFO_WR_WIDTH           = 'd32              , //用户端FIFO写位宽
                 FIFO_RD_WIDTH           = 'd32              , //用户端FIFO读位宽
                 UI_FREQ                 = 'd160_000_000     , //DDR3控制器输出的用户时钟频率
                 WR_BURST_LEN            = 'd31              , //写FIFO写突发长度为WR_BURST_LEN+1
                 RD_BURST_LEN            = 'd31              , //读FIFO读突发长度为RD_BURST_LEN+1
+                UART_BPS                = 'd1_500_000       , //串口波特率
+                UART_CLK_FREQ           = 'd100_000_000     , //串口时钟频率
                                                             
                 //AXI总线相关参数                           
                 AXI_WIDTH               = 'd64              , //AXI总线读写数据位宽
@@ -43,11 +45,11 @@ module multichan_ddr_hdmi
                 WR_FIFO_RAM_DEPTH       = 'd2048            , //写FIFO内部RAM存储器深度
                 WR_FIFO_RAM_ADDR_WIDTH  = 'd11              , //写FIFO内部RAM读写地址宽度, log2(WR_FIFO_RAM_DEPTH)
                 WR_FIFO_WR_IND          = 'd1               , //写FIFO单次写操作访问的ram_mem单元个数 FIFO_WR_WIDTH/WR_FIFO_RAM_WIDTH
-                WR_FIFO_RD_IND          = 'd8               , //写FIFO单次读操作访问的ram_mem单元个数 AXI_WIDTH/WR_FIFO_RAM_ADDR_WIDTH        
+                WR_FIFO_RD_IND          = 'd2               , //写FIFO单次读操作访问的ram_mem单元个数 AXI_WIDTH/WR_FIFO_RAM_ADDR_WIDTH        
                 WR_FIFO_RAM_WIDTH       = FIFO_WR_WIDTH     , //写FIFO RAM存储器的位宽
                 WR_FIFO_WR_L2           = 'd0               , //log2(WR_FIFO_WR_IND)
-                WR_FIFO_RD_L2           = 'd3               , //log2(WR_FIFO_RD_IND)
-                WR_FIFO_RAM_RD2WR       = 'd8               , //读数据位宽和写数据位宽的比, 即一次读取的RAM单元深度, RAM_RD2WR = RD_WIDTH/WR_WIDTH, 当读位宽小于等于写位宽时, 值为1   
+                WR_FIFO_RD_L2           = 'd1               , //log2(WR_FIFO_RD_IND)
+                WR_FIFO_RAM_RD2WR       = 'd2               , //读数据位宽和写数据位宽的比, 即一次读取的RAM单元深度, RAM_RD2WR = RD_WIDTH/WR_WIDTH, 当读位宽小于等于写位宽时, 值为1   
     
                 //读FIFO相关参数 
                 RD_FIFO_RAM_DEPTH       = 'd2048            , //读FIFO内部RAM存储器深度
@@ -97,16 +99,16 @@ module multichan_ddr_hdmi
         inout   wire [3:0]  ddr3_dqs_p    ,
         output  wire        ddr3_cs_n     ,
         output  wire [3:0]  ddr3_dm       ,
-        output  wire        ddr3_odt      ,
+        output  wire        ddr3_odt       
         
-        //SD卡接口
+/*         //SD卡接口
         output  wire        sdclk         ,
         inout               sdcmd         ,
         input   wire        sddat0        ,            
         output  wire        sddat1        ,            
         output  wire        sddat2        ,            
         output  wire        sddat3        ,
-        output  wire        rd_file_done    
+        output  wire        rd_file_done     */
     );
     //时钟复位相关连线
     wire        clk_ddr                     ;
@@ -116,9 +118,11 @@ module multichan_ddr_hdmi
     wire        locked_rst_n                ;  //和locked相与的复位信号, 作为DDR接口的真正复位信号
     wire        locked_calib_rst_n          ;  //和locked以及calib_done相与的复位信号, 为高时代表时钟稳定且DDR校准完成
     
-    //SD卡接口相关连线
+    //写接口相关连线
     wire [FIFO_WR_WIDTH-1:0] fifo_wr_data   ; //FIFO写数据
-    wire                     fifo_wr_en     ; //FIFO写使能  
+    wire                     fifo_wr_en     ; //FIFO写使能 
+
+    
 
     //DDR3接口用户端连线
     wire                     rd_mem_enable  ; //读存储器使能
@@ -137,15 +141,31 @@ module multichan_ddr_hdmi
     wire                     pix_req        ; //像素读请求
     wire [23:0]              rgb_out        ; //输出的RGB图像信号
     
-    //SD卡状态变量输出, 可作为调试用
+/*     //SD卡状态变量输出, 可作为调试用
     wire [3:0]               card_stat      ;
     wire [1:0]               card_type      ;
     wire [1:0]               filesystem_type;
-    wire                     file_found     ;
+    wire                     file_found     ; */
     
     //图像定位坐标变量, 用于确定目前显示的显示区域
     reg [10:0]               cnt_h          ; //横向像素计数器
     reg [9:0]                cnt_v          ; //竖向像素计数器
+    
+    reg [27:0] cnt_rd_en    ; 
+    wire       flag_rd_en   ;
+    
+    //cnt_rd_en
+    always@(posedge clk or negedge rst_n) begin
+        if(!rst_n) begin
+            cnt_rd_en <= 'd0;
+        end else if(cnt_rd_en == 'd99_999_999) begin //2s计数
+            cnt_rd_en <= cnt_rd_en;
+        end else begin
+            cnt_rd_en <= cnt_rd_en + 'd1;
+        end
+    end
+    
+    assign flag_rd_en = (cnt_rd_en == 'd99_999_999)?1'b1:1'b0;
     
     
     
@@ -229,7 +249,7 @@ module multichan_ddr_hdmi
     assign locked_calib_rst_n   = locked_rst_n & calib_done ;
     
     //按键控制模块
-    key_ctrl
+/*     key_ctrl
     #(.FREQ(UI_FREQ)) //模块输入时钟频率, 与DDR3 AXI控制器的用户时钟相同 
     key_ctrl_inst
     (
@@ -238,11 +258,11 @@ module multichan_ddr_hdmi
         .key_in      (key_in        ),
         
         .state_out   (key_state_out )   
-    );
+    ); */
     
-    assign rd_mem_enable = key_state_out; //按键控制读存储器使能
+    assign rd_mem_enable = flag_rd_en; //按键控制读存储器使能
     
-/*     //串口数据接收器
+    //串口数据接收器
     uart_receiver
     #(
         .UART_BPS        (UART_BPS          ),   //串口波特率
@@ -258,11 +278,11 @@ module multichan_ddr_hdmi
         
         .fifo_wr_data(fifo_wr_data), //FIFO写数据
         .fifo_wr_en  (fifo_wr_en  )  //FIFO写使能
-    ); */
+    );
     
     
     
-    //SD读卡模块
+/*     //SD读卡模块
     sd_file_reader #(
     .FILE_NAME_LEN (11           ), // length of FILE_NAME (in bytes). Since the length of "example.txt" is 11, so here is 11.
     .FILE_NAME     ("fisherg.txt"), // file name to read, ignore upper and lower case
@@ -291,12 +311,12 @@ module multichan_ddr_hdmi
         .filesystem_type   (filesystem_type   ),  // 0=UNASSIGNED , 1=UNKNOWN , 2=FAT16 , 3=FAT32 
         .file_found        (file_found        ),  // 0=file not found, 1=file found
         // file content data output (sync with clk)
-        .outen             (fifo_wr_en        ),  // when outen=1, a byte of file content is read out from outbyte
-        .outbyte           (fifo_wr_data      )   // a byte of file content
+        .outen             (                  ),  // when outen=1, a byte of file content is read out from outbyte
+        .outbyte           (                  )   // a byte of file content
     );
 
     //使用SD卡SDIO单线模式, 将sddat1-sddat3驱动为1, 防止进入SPI模式
-    assign {sddat1, sddat2, sddat3} = 3'b111;
+    assign {sddat1, sddat2, sddat3} = 3'b111; */
     
     
     //VGA时序生成器
@@ -389,13 +409,13 @@ module multichan_ddr_hdmi
         .rd_rst          ((~locked_rst_n) | (~rd_mem_enable)), //读复位, 高电平有效
         .rd_mem_enable   (rd_mem_enable                     ), //读存储器使能, 防止存储器未写先读
         .rd_beg_addr0    ('d0                               ), //读通道0读起始地址
-        .rd_beg_addr1    ('d1228800                         ), //读通道1读起始地址
-        .rd_beg_addr2    ('d2457600                         ), //读通道2读起始地址
-        .rd_beg_addr3    ('d3686400                         ), //读通道3读起始地址
-        .rd_end_addr0    ('d1228799                         ), //读通道0读终止地址
-        .rd_end_addr1    ('d2457599                         ), //读通道1读终止地址
-        .rd_end_addr2    ('d3686399                         ), //读通道2读终止地址
-        .rd_end_addr3    ('d4915199                         ), //读通道3读终止地址
+        .rd_beg_addr1    ('d1228800*'d1                     ), //读通道1读起始地址
+        .rd_beg_addr2    ('d1228800*'d2                     ), //读通道2读起始地址
+        .rd_beg_addr3    ('d1228800*'d3                     ), //读通道3读起始地址
+        .rd_end_addr0    ('d1228800*'d1-'d1                 ), //读通道0读终止地址
+        .rd_end_addr1    ('d1228800*'d2-'d1                 ), //读通道1读终止地址
+        .rd_end_addr2    ('d1228800*'d3-'d1                 ), //读通道2读终止地址
+        .rd_end_addr3    ('d1228800*'d4-'d1                 ), //读通道3读终止地址
         .rd_burst_len0   ('d31                              ), //读通道0读突发长度
         .rd_burst_len1   ('d31                              ), //读通道1读突发长度
         .rd_burst_len2   ('d31                              ), //读通道2读突发长度
