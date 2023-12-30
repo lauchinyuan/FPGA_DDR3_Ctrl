@@ -7,7 +7,7 @@
 - [non_fifo_ip branch](https://github.com/lauchinyuan/FPGA_DDR3_Ctrl/tree/non_fifo_ip)提供了不使用FIFO IP核的实现方案，即利用自行设计的异步FIFO模块，取代FIFO IP核，实测其部署后的资源开销更小。
 
 - [sd_ddr_hdmi](https://github.com/lauchinyuan/FPGA_DDR3_Ctrl/tree/sd_ddr_hdmi) branch提供了从SD卡读取数据到SDRAM的工程版本。
-- [multi_channel](https://github.com/lauchinyuan/FPGA_DDR3_Ctrl/tree/multi_channel) branch实现了多通道读取SDRAM地址，并在一个屏幕上显示读取图像的简单示例，设计了读写控制逻辑及简单的通道优先级仲裁机制，ILA抓取波形确认无误。
+- [multi_channel](https://github.com/lauchinyuan/FPGA_DDR3_Ctrl/tree/multi_channel) branch实现了多通道读取SDRAM地址，并在一个屏幕上显示读取图像的简单示例，设计了读写控制逻辑及简单的通道读写仲裁器。
 
 **若您想复现该工程，请先阅读本文最后一段，有任何问题欢迎您通过lauchinyuan@yeah.net联系我，一起探讨学习。**
 
@@ -25,9 +25,15 @@ FPGA上板实验的效果如图1-3所示，硬件实验平台使用的是博宸�
 
 <center>图3. 演示3(视频播放)</center>
 
+![](./img/README/multi_channel_demo.jpg)
+
+图4. 演示4(多通道读取)
+
 #### 更新说明
 
 2023/11/23： 更改了MATLAB脚本生成文件的逻辑，将图像/视频像素数据直接以二进制的形式写入txt文本，这一文本文件可以直接通过串口调试助手发送，更实用。
+
+2023/12/30：新增多通道读写机制，设计了多通道读写仲裁控制机制，可以实现图像/视频的多通道读取，相关代码在[multi_channel](https://github.com/lauchinyuan/FPGA_DDR3_Ctrl/tree/multi_channel) 。
 
 #### 仓库内容简介
 
@@ -41,11 +47,11 @@ FPGA上板实验的效果如图1-3所示，硬件实验平台使用的是博宸�
 
 #### 数据流&框图
 
-本项目的结构示意图如图3
+本项目的结构示意图如图5
 
 ![](./img/README/structure.jpg)
 
-<center>图3. 系统框图</center>
+<center>图5. 系统框图</center>
 
 处理数据的流程具体说明如下：
 
